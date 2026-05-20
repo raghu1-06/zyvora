@@ -1,0 +1,65 @@
+name: zyvora
+description: "Dual Life Productivity System - Reminders, Attendance, Analytics."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.5
+  flutter_local_notifications: ^21.0.0
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.1.0
+  timezone: ^0.11.0
+  flutter_timezone: ^5.0.2
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  intl: ^0.20.2
+  fl_chart: ^1.2.0
+  google_fonts: ^8.1.0
+  table_calendar: ^3.2.0
+  flutter_animate: ^4.5.2
+  lottie: ^3.3.3
+  flutter_native_splash: ^2.4.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_native_splash:
+  color: "#F6F7FB"
+  color_dark: "#F6F7FB"
+  image: assets/icon/app_icon.png
+  image_dark: assets/icon/app_icon.png
+  android: true
+  ios: true
+  web: true
+  fullscreen: false
+  android_gravity: center
+  ios_content_mode: center
+  web_image_mode: center
+  android_12:
+    color: "#F6F7FB"
+    color_dark: "#F6F7FB"
+    image: assets/icon/app_icon.png
+    image_dark: assets/icon/app_icon.png
+    icon_background_color: "#F6F7FB"
+    icon_background_color_dark: "#F6F7FB"
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
