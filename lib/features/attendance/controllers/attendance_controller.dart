@@ -262,12 +262,25 @@ class AttendanceController extends ChangeNotifier with SafeNotifier {
 
   Future<void> deleteRecord(int id, String subject) async {
     final resolved = _resolveSubject(subject);
+    final records = _records[resolved];
+    if (records == null) return;
+
+    final index = records.indexWhere((r) => r.id == id);
+    if (index == -1) return;
+
+    final originalRecord = records[index];
+
+    // Optimistic update
+    records.removeAt(index);
+    _notifySafely();
+
     try {
       await _repo.deleteAttendance(id);
-      _records[resolved]?.removeWhere((record) => record.id == id);
-      _notifySafely();
     } catch (e) {
-      debugPrint('Error deleting attendance record: $e');
+      debugPrint('Error deleting attendance record, rolling back: $e');
+      records.insert(index, originalRecord);
+      records.sort((a, b) => b.date.compareTo(a.date));
+      _notifySafely();
       rethrow;
     }
   }
@@ -277,14 +290,28 @@ class AttendanceController extends ChangeNotifier with SafeNotifier {
     required DateTime date,
   }) async {
     final resolved = _resolveSubject(subject);
+    final records = _records[resolved];
+    if (records == null) return;
+
     final normalizedDate = AttendanceRecord.normalizeDate(date);
     final dateKey = AttendanceRecord.dateKeyFor(normalizedDate);
+
+    final index = records.indexWhere((r) => r.dateKey == dateKey);
+    if (index == -1) return;
+
+    final originalRecord = records[index];
+
+    // Optimistic update
+    records.removeAt(index);
+    _notifySafely();
+
     try {
       await _repo.deleteAttendanceForSubjectDate(resolved, normalizedDate);
-      _records[resolved]?.removeWhere((record) => record.dateKey == dateKey);
-      _notifySafely();
     } catch (e) {
-      debugPrint('Error deleting attendance date entry: $e');
+      debugPrint('Error deleting attendance date entry, rolling back: $e');
+      records.insert(index, originalRecord);
+      records.sort((a, b) => b.date.compareTo(a.date));
+      _notifySafely();
       rethrow;
     }
   }

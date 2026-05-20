@@ -29,6 +29,8 @@ class ReminderController extends ChangeNotifier with SafeNotifier {
   }
 
   List<Reminder> _reminders = [];
+  List<Reminder>? _cachedActive;
+  List<Reminder>? _cachedToday;
   List<Map<String, dynamic>> _completionLogs = [];
   String? _selectedCategory;
   bool _isReady = false;
@@ -47,16 +49,27 @@ class ReminderController extends ChangeNotifier with SafeNotifier {
   String get todayName => _userController.todayName;
 
   List<Reminder> get activeReminders {
+    if (_cachedActive != null) return _cachedActive!;
     final mode = _userController.lifeMode;
-    if (mode == null) return List.unmodifiable(_reminders);
-    final modeValue = mode.storageValue;
-    return _reminders.where((r) => r.lifeMode == modeValue).toList();
+    if (mode == null) {
+      _cachedActive = List.unmodifiable(_reminders);
+    } else {
+      final modeValue = mode.storageValue;
+      _cachedActive = List.unmodifiable(
+        _reminders.where((r) => r.lifeMode == modeValue),
+      );
+    }
+    return _cachedActive!;
   }
 
   List<Reminder> get todayReminders {
+    if (_cachedToday != null) return _cachedToday!;
     final today = todayName;
-    return activeReminders.where((r) => r.day == today).toList()
-      ..sort((a, b) => a.minutesFromMidnight.compareTo(b.minutesFromMidnight));
+    _cachedToday = List.unmodifiable(
+      activeReminders.where((r) => r.day == today).toList()
+        ..sort((a, b) => a.minutesFromMidnight.compareTo(b.minutesFromMidnight)),
+    );
+    return _cachedToday!;
   }
 
   int get totalReminderCount => activeReminders.length;
@@ -283,27 +296,68 @@ class ReminderController extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> deleteReminder(int id) async {
-    await _repo.delete(id);
-    await _repo.deleteCompletionLogsForReminder(id);
-    await _notificationService.cancel(id);
-    _reminders.removeWhere((r) => r.id == id);
-    _completionLogs = await _repo.getCompletionLogs(days: 30);
+    final index = _reminders.indexWhere((r) => r.id == id);
+    if (index == -1) return;
+
+    final originalReminder = _reminders[index];
+    final originalLogs = List<Map<String, dynamic>>.from(_completionLogs);
+
+    // Optimistic update
+    _reminders.removeAt(index);
+    _completionLogs.removeWhere((log) => log['reminderId'] == id);
     notifySafely();
+
+    try {
+      await _repo.delete(id);
+      await _repo.deleteCompletionLogsForReminder(id);
+      await _notificationService.cancel(id);
+      // Refresh logs from source of truth
+      _completionLogs = await _repo.getCompletionLogs(days: 30);
+      notifySafely();
+    } catch (e) {
+      debugPrint('Error deleting reminder, rolling back: $e');
+      _reminders.insert(index, originalReminder);
+      _completionLogs = originalLogs;
+      _sortReminders();
+      notifySafely();
+      rethrow;
+    }
   }
 
   Future<void> toggleReminderComplete(int id) async {
     final idx = _reminders.indexWhere((r) => r.id == id);
     if (idx == -1) return;
 
-    final reminder = _reminders[idx];
-    final nowCompleted = !reminder.isCompleted;
+    final originalReminder = _reminders[idx];
+    final originalLogs = List<Map<String, dynamic>>.from(_completionLogs);
+    final nowCompleted = !originalReminder.isCompleted;
     final now = DateTime.now();
 
-    final updated = reminder.copyWith(
+    final updated = originalReminder.copyWith(
       isCompleted: nowCompleted,
       completedAt: nowCompleted ? now : null,
       updatedAt: now,
     );
+
+    // Optimistic update
+    _reminders[idx] = updated;
+    if (!nowCompleted) {
+      final dateStr = _dateKey(now);
+      _completionLogs.removeWhere((log) {
+        final completedAt = log['completedAt'] as String?;
+        return log['reminderId'] == id &&
+            completedAt != null &&
+            completedAt.startsWith(dateStr);
+      });
+    } else {
+      _completionLogs.add({
+        'reminderId': id,
+        'completedAt': now.toIso8601String(),
+        'dayOfWeek': now.weekday,
+        'hourOfDay': now.hour,
+      });
+    }
+    notifySafely();
 
     try {
       await _repo.update(id, {
@@ -322,11 +376,14 @@ class ReminderController extends ChangeNotifier with SafeNotifier {
         });
       }
 
-      _reminders[idx] = updated;
+      // Final sync with DB truth
       _completionLogs = await _repo.getCompletionLogs(days: 30);
       notifySafely();
     } catch (e) {
-      debugPrint('Could not toggle reminder completion: $e');
+      debugPrint('Error toggling reminder, rolling back: $e');
+      _reminders[idx] = originalReminder;
+      _completionLogs = originalLogs;
+      notifySafely();
       rethrow;
     }
   }
@@ -417,6 +474,18 @@ class ReminderController extends ChangeNotifier with SafeNotifier {
       if (dayCompare != 0) return dayCompare;
       return a.minutesFromMidnight.compareTo(b.minutesFromMidnight);
     });
+    _clearCache();
+  }
+
+  void _clearCache() {
+    _cachedActive = null;
+    _cachedToday = null;
+  }
+
+  @override
+  void notifySafely() {
+    _clearCache();
+    super.notifySafely();
   }
 
   String _dateKey(DateTime value) => value.toIso8601String().substring(0, 10);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
+import '../models/reminder.dart';
 import '../core/providers.dart';
 import '../features/tasks/controllers/reminder_controller.dart';
 import '../models/zyvora_role.dart';
@@ -94,7 +95,7 @@ class _PremiumRemindersScreenState extends ConsumerState<PremiumRemindersScreen>
     );
   }
 
-  Widget _buildReminderCard(BuildContext context, dynamic reminder) {
+  Widget _buildReminderCard(BuildContext context, Reminder reminder) {
     return PremiumCard(
       padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing12),
       onTap: () {
@@ -210,7 +211,17 @@ class _PremiumRemindersScreenState extends ConsumerState<PremiumRemindersScreen>
 
   void _showFilterOptions(BuildContext context) {
     final ctrl = ref.read(reminderControllerProvider);
-    final categories = ['All', ...PersonalCategories.all];
+    final user = ref.read(userControllerProvider);
+    final isPersonal = user.lifeMode?.storageValue == 'personal';
+
+    final List<String> availableCategories;
+    if (isPersonal) {
+      availableCategories = PersonalCategories.all;
+    } else {
+      availableCategories = user.role?.categories ?? ['Custom'];
+    }
+
+    final categories = ['All', ...availableCategories];
 
     showDialog<void>(
       context: context,

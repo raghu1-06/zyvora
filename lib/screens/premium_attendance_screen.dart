@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async' show unawaited;
 
 import '../core/providers.dart';
+import '../features/attendance/controllers/attendance_controller.dart';
+import '../models/attendance_record.dart';
 import '../utils/zyvora_animations.dart';
 import '../utils/zyvora_design_system.dart';
 import '../widgets/premium_components.dart';
@@ -58,7 +60,7 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
 
   Widget _buildAttendanceContent(
     BuildContext context,
-    List<dynamic> stats,
+    List<SubjectAttendance> stats,
   ) {
     final overallPercentage = _calculateOverallAttendance(stats);
 
@@ -163,8 +165,8 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
     );
   }
 
-  Widget _buildSubjectCard(BuildContext context, dynamic stat) {
-    final percentage = stat.total > 0 ? (stat.present / stat.total * 100) : 0.0;
+  Widget _buildSubjectCard(BuildContext context, SubjectAttendance stat) {
+    final percentage = stat.percentage;
 
     return PremiumCard(
       onTap: () => _showSubjectDetails(context, stat),
@@ -273,7 +275,7 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
     );
   }
 
-  double _calculateOverallAttendance(List<dynamic> stats) {
+  double _calculateOverallAttendance(List<SubjectAttendance> stats) {
     if (stats.isEmpty) return 0;
     double totalPresent = 0;
     double totalClasses = 0;
@@ -304,7 +306,7 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
     );
   }
 
-  void _showSubjectDetails(BuildContext context, dynamic stat) {
+  void _showSubjectDetails(BuildContext context, SubjectAttendance stat) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SubjectAttendanceDetailScreen(subject: stat.subject),
