@@ -9,6 +9,7 @@ import '../core/theme/app_theme.dart';
 import '../models/reminder.dart';
 import '../widgets/add_reminder_sheet.dart';
 import '../widgets/reminder_tile.dart';
+import '../widgets/premium_navigation.dart';
 import '../features/tasks/controllers/reminder_controller.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
@@ -122,7 +123,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final dayTasks = reminders.remindersForDay(dayName);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendar')),
+      appBar: const PremiumAppBar(title: 'Calendar'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
         children: [

@@ -7,6 +7,7 @@ import '../core/utils/error_handler.dart';
 import '../utils/zyvora_animations.dart';
 import '../utils/zyvora_design_system.dart';
 import '../widgets/premium_components.dart';
+import '../widgets/premium_navigation.dart';
 
 class PremiumProfileScreen extends ConsumerWidget {
   const PremiumProfileScreen({super.key});
@@ -16,7 +17,7 @@ class PremiumProfileScreen extends ConsumerWidget {
     final ctrl = ref.watch(userControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: const PremiumAppBar(title: 'Profile'),
       body: ZyvoraAnimations.fadeSlideUp(
         duration: const Duration(milliseconds: 400),
         slideDistance: 24,
@@ -24,64 +25,70 @@ class PremiumProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing16),
           children: [
             PremiumCard(
-              child: Row(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          ZyvoraDesignSystem.accentBlue.withValues(alpha: 0.95),
-                          ZyvoraDesignSystem.accentPurple.withValues(
-                            alpha: 0.95,
+              child: Padding(
+                padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            ZyvoraDesignSystem.accentBlue.withValues(alpha: 0.95),
+                            ZyvoraDesignSystem.accentPurple.withValues(
+                              alpha: 0.95,
+                            ),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(
+                          ZyvoraDesignSystem.radiusLarge,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.account_circle,
+                        size: 48,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: ZyvoraDesignSystem.spacing16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ctrl.userName.isNotEmpty ? ctrl.userName : 'Guest',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: ZyvoraDesignSystem.spacing4),
+                          Text(
+                            ctrl.lifeMode?.label ?? 'No mode selected',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: ZyvoraDesignSystem.textSecondary,
+                                ),
                           ),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(
-                        ZyvoraDesignSystem.radiusLarge,
-                      ),
                     ),
-                    child: const Icon(
-                      Icons.account_circle,
-                      size: 64,
-                      color: Colors.white,
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => _showEditNameDialog(context, ctrl),
                     ),
-                  ),
-                  const SizedBox(width: ZyvoraDesignSystem.spacing16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ctrl.userName.isNotEmpty ? ctrl.userName : 'Guest',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: ZyvoraDesignSystem.spacing4),
-                        Text(
-                          ctrl.lifeMode?.label ?? 'No mode selected',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: ZyvoraDesignSystem.textSecondary,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => _showEditNameDialog(context, ctrl),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
             const SizedBox(height: ZyvoraDesignSystem.spacing24),
 
-            Text(
-              'Settings',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: ZyvoraDesignSystem.weightSemiBold,
+            Padding(
+              padding: const EdgeInsets.only(left: ZyvoraDesignSystem.spacing4),
+              child: Text(
+                'Settings',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: ZyvoraDesignSystem.weightSemiBold,
+                ),
               ),
             ),
             const SizedBox(height: ZyvoraDesignSystem.spacing12),

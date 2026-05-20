@@ -6,6 +6,7 @@ import '../core/providers.dart';
 import '../utils/zyvora_animations.dart';
 import '../utils/zyvora_design_system.dart';
 import '../widgets/premium_components.dart';
+import '../widgets/premium_navigation.dart';
 import '../widgets/safe_form_widgets.dart';
 import 'subject_attendance_detail_screen.dart';
 
@@ -36,7 +37,7 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
     super.build(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance')),
+      appBar: const PremiumAppBar(title: 'Attendance'),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddSubjectSheet(context),
         child: const Icon(Icons.add),
@@ -59,6 +60,8 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
     BuildContext context,
     List<dynamic> stats,
   ) {
+    final overallPercentage = _calculateOverallAttendance(stats);
+
     return CustomScrollView(
       slivers: [
         // Overall stats header
@@ -76,20 +79,16 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
                       children: [
                         Text(
                           'Overall Attendance',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: ZyvoraDesignSystem.weightSemiBold,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: ZyvoraDesignSystem.weightSemiBold,
+                          ),
                         ),
                         Text(
-                          '${_calculateOverallAttendance(stats).round()}%',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                color: _getAttendanceColor(
-                                  _calculateOverallAttendance(stats),
-                                ),
-                                fontWeight: ZyvoraDesignSystem.weightBold,
-                              ),
+                          '${overallPercentage.round()}%',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: _getAttendanceColor(overallPercentage),
+                            fontWeight: ZyvoraDesignSystem.weightBold,
+                          ),
                         ),
                       ],
                     ),
@@ -99,12 +98,10 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
                         ZyvoraDesignSystem.radiusSmall,
                       ),
                       child: LinearProgressIndicator(
-                        value: _calculateOverallAttendance(stats) / 100,
+                        value: overallPercentage / 100,
                         backgroundColor: ZyvoraDesignSystem.surfaceAlt,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          _getAttendanceColor(
-                            _calculateOverallAttendance(stats),
-                          ),
+                          _getAttendanceColor(overallPercentage),
                         ),
                         minHeight: 8,
                       ),
@@ -120,7 +117,10 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
         if (stats.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing32),
+              padding: const EdgeInsets.symmetric(
+                horizontal: ZyvoraDesignSystem.spacing16,
+                vertical: ZyvoraDesignSystem.spacing32,
+              ),
               child: PremiumEmptyState(
                 icon: Icons.school_outlined,
                 title: 'No subjects yet',
@@ -142,15 +142,18 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
                 crossAxisSpacing: ZyvoraDesignSystem.spacing12,
                 childAspectRatio: 0.85,
               ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final stat = stats[index];
-                return ZyvoraAnimations.scaleIn(
-                  duration: const Duration(milliseconds: 300),
-                  begin: 0.8,
-                  curve: Curves.easeOutBack,
-                  child: _buildSubjectCard(context, stat),
-                );
-              }, childCount: stats.length),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final stat = stats[index];
+                  return ZyvoraAnimations.scaleIn(
+                    duration: const Duration(milliseconds: 300),
+                    begin: 0.8,
+                    curve: Curves.easeOutBack,
+                    child: _buildSubjectCard(context, stat),
+                  );
+                },
+                childCount: stats.length,
+              ),
             ),
           ),
 
@@ -184,16 +187,11 @@ class _PremiumAttendanceScreenState extends ConsumerState<PremiumAttendanceScree
                     _getAttendanceColor(percentage),
                   ),
                 ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${percentage.round()}%',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: ZyvoraDesignSystem.weightBold,
-                      ),
-                    ),
-                  ],
+                Text(
+                  '${percentage.round()}%',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: ZyvoraDesignSystem.weightBold,
+                  ),
                 ),
               ],
             ),
@@ -407,13 +405,16 @@ class _AddSubjectSheetState extends State<_AddSubjectSheet> {
               ),
               const SizedBox(width: ZyvoraDesignSystem.spacing12),
               Expanded(
-                child: _subjectCtrl.text.trim().isEmpty
-                    ? PremiumButton(label: 'Add', onPressed: () {})
-                    : PremiumButton(
-                        label: 'Add',
-                        onPressed: () =>
-                            widget.onSave(_subjectCtrl.text.trim()),
-                      ),
+                child: ListenableBuilder(
+                  listenable: _subjectCtrl,
+                  builder: (context, _) {
+                    final isEmpty = _subjectCtrl.text.trim().isEmpty;
+                    return PremiumButton(
+                      label: 'Add',
+                      onPressed: isEmpty ? () {} : () => widget.onSave(_subjectCtrl.text.trim()),
+                    );
+                  }
+                ),
               ),
             ],
           ),
