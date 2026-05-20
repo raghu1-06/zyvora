@@ -126,6 +126,16 @@ class ZyvoraTheme {
         ),
       ),
 
+      // Floating Action Button Theme
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: ZyvoraDesignSystem.accentBlue,
+        foregroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ZyvoraDesignSystem.radiusMedium),
+        ),
+      ),
+
       // Text Theme
       textTheme: _buildTextTheme(),
 
@@ -515,6 +525,16 @@ class ZyvoraTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(ZyvoraDesignSystem.radiusLarge),
           side: const BorderSide(color: Color(0xFFEEEEEE), width: 1),
+        ),
+      ),
+
+      // Floating Action Button Theme
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: ZyvoraDesignSystem.accentBlue,
+        foregroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ZyvoraDesignSystem.radiusMedium),
         ),
       ),
 

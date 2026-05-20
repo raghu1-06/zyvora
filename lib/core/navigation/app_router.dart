@@ -5,13 +5,12 @@ import '../../core/navigation/main_shell.dart';
 import '../../core/navigation/root_gate.dart';
 import '../../screens/auth_screen.dart';
 import '../../screens/calendar_screen.dart';
-import '../../screens/home_dashboard.dart';
-import '../../screens/premium/premium_home_dashboard.dart';
 import '../../screens/mode_selection_screen.dart';
 import '../../screens/onboarding_screen.dart';
-import '../../screens/profile_screen.dart';
-import '../../screens/tasks_screen.dart';
-import '../../screens/attendance_screen.dart';
+import '../../screens/premium/premium_home_dashboard.dart';
+import '../../screens/premium_reminders_screen.dart';
+import '../../screens/premium_attendance_screen.dart';
+import '../../screens/premium_profile_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -42,14 +41,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/app/dashboard',
-                builder: (context, state) => const HomeDashboard(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/app/premium',
                 builder: (context, state) => const PremiumHomeDashboard(),
               ),
             ],
@@ -58,7 +49,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/app/tasks',
-                builder: (context, state) => const TasksScreen(),
+                builder: (context, state) => const PremiumRemindersScreen(),
               ),
             ],
           ),
@@ -66,7 +57,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/app/attendance',
-                builder: (context, state) => const AttendanceScreen(),
+                builder: (context, state) => const PremiumAttendanceScreen(),
               ),
             ],
           ),
@@ -82,7 +73,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/app/profile',
-                builder: (context, state) => const ProfileScreen(),
+                builder: (context, state) => const PremiumProfileScreen(),
               ),
             ],
           ),

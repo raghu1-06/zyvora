@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../utils/zyvora_design_system.dart';
 
 /// Light-first design system for Zyvora.
 class ZyvoraColors {
@@ -148,29 +149,9 @@ class AppTheme {
     );
   }
 
-  static ThemeData light() {
-    return _theme(
-      brightness: Brightness.light,
-      bg: ZyvoraColors.background,
-      surface: ZyvoraColors.card,
-      surfaceSoft: ZyvoraColors.cardMuted,
-      text: ZyvoraColors.textPrimary,
-      secondaryText: ZyvoraColors.textSecondary,
-      border: ZyvoraColors.borderLight,
-    );
-  }
+  static ThemeData light() => ZyvoraTheme.buildLightTheme();
 
-  static ThemeData dark() {
-    return _theme(
-      brightness: Brightness.dark,
-      bg: ZyvoraColors.bgDark,
-      surface: ZyvoraColors.surfaceDark,
-      surfaceSoft: ZyvoraColors.surfaceSoftDark,
-      text: ZyvoraColors.textDark,
-      secondaryText: ZyvoraColors.textSecondaryDark,
-      border: ZyvoraColors.borderDark,
-    );
-  }
+  static ThemeData dark() => ZyvoraTheme.buildDarkTheme();
 
   static ThemeData _theme({
     required Brightness brightness,

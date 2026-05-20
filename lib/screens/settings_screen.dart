@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/providers.dart';
-import '../core/theme/app_theme.dart';
 import '../core/utils/error_handler.dart';
 import '../features/profile/controllers/user_controller.dart';
 import '../models/zyvora_role.dart';
+import '../utils/zyvora_design_system.dart';
+import '../widgets/premium_components.dart';
+import '../widgets/premium_navigation.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -15,40 +17,30 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.watch(userControllerProvider);
-    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const PremiumAppBar(title: 'Settings'),
       body: ListView(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing16),
         children: [
-          AnimatedContainer(
-            duration: ZyvoraMotion.regular,
-            curve: ZyvoraMotion.curve,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(ZyvoraRadius.md),
-              border: Border.all(
-                color: theme.colorScheme.outline.withValues(alpha: 0.7),
-              ),
-            ),
+          PremiumCard(
+            padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing16),
             child: Row(
               children: [
                 Container(
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: ZyvoraColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(ZyvoraRadius.md),
+                    color: ZyvoraDesignSystem.accentBlue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(ZyvoraDesignSystem.radiusMedium),
                   ),
                   child: const Icon(
                     Icons.person_outline,
-                    color: ZyvoraColors.primary,
+                    color: ZyvoraDesignSystem.accentBlue,
                     size: 26,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: ZyvoraDesignSystem.spacing16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,13 +49,15 @@ class SettingsScreen extends ConsumerWidget {
                         ctrl.userName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                       Text(
                         ctrl.lifeMode != null
                             ? '${ctrl.lifeMode!.label} mode'
                             : 'No mode selected',
-                        style: theme.textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ZyvoraDesignSystem.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -76,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: ZyvoraDesignSystem.spacing24),
           const SettingsBody(),
         ],
       ),
@@ -104,7 +98,7 @@ class SettingsScreen extends ConsumerWidget {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
-            FilledButton(
+            TextButton(
               onPressed: () => Navigator.pop(ctx, tc.text),
               child: const Text('Save'),
             ),
@@ -120,9 +114,8 @@ class SettingsScreen extends ConsumerWidget {
           await ctrl.setUserName(trimmed);
 
           if (!context.mounted) return;
-          ZyvoraErrorHandler.showSuccess(
-            context,
-            message: 'Name saved successfully',
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Name saved successfully')),
           );
         } catch (e) {
           if (!context.mounted) return;
@@ -139,31 +132,30 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Core preference tiles (embedded in [ProfileScreen] without duplicate header).
+/// Core preference tiles.
 class SettingsBody extends ConsumerWidget {
   const SettingsBody({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.watch(userControllerProvider);
-    final theme = Theme.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SettingsTile(
-          icon: Icons.dark_mode_outlined,
+        PremiumListTile(
+          leading: const Icon(Icons.dark_mode_outlined),
           title: 'Dark Mode',
           trailing: Switch(
             value: ctrl.isDarkMode,
             onChanged: (v) => ctrl.setDarkMode(v),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: ZyvoraDesignSystem.spacing12),
         const _PushNotificationsTile(),
-        const SizedBox(height: 8),
-        SettingsTile(
-          icon: Icons.cloud_sync_outlined,
+        const SizedBox(height: ZyvoraDesignSystem.spacing12),
+        PremiumListTile(
+          leading: const Icon(Icons.cloud_sync_outlined),
           title: 'Backup & sync',
           subtitle: 'Coming soon — encrypted cloud backup',
           onTap: () {
@@ -174,9 +166,9 @@ class SettingsBody extends ConsumerWidget {
             );
           },
         ),
-        const SizedBox(height: 8),
-        SettingsTile(
-          icon: Icons.swap_horiz,
+        const SizedBox(height: ZyvoraDesignSystem.spacing12),
+        PremiumListTile(
+          leading: const Icon(Icons.swap_horiz),
           title: 'Switch Life Mode',
           subtitle: ctrl.lifeMode?.label ?? 'Not set',
           onTap: () {
@@ -185,34 +177,27 @@ class SettingsBody extends ConsumerWidget {
           },
         ),
         if (ctrl.role != null) ...[
-          const SizedBox(height: 8),
-          SettingsTile(
-            icon: Icons.badge_outlined,
+          const SizedBox(height: ZyvoraDesignSystem.spacing12),
+          PremiumListTile(
+            leading: const Icon(Icons.badge_outlined),
             title: 'Role',
             subtitle: ctrl.role!.label,
             onTap: () => _changeRole(context, ref, ctrl),
           ),
         ],
-        const SizedBox(height: 24),
-        AnimatedContainer(
-          duration: ZyvoraMotion.regular,
-          curve: ZyvoraMotion.curve,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(ZyvoraRadius.md),
-            border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.7),
-            ),
-          ),
+        const SizedBox(height: ZyvoraDesignSystem.spacing32),
+        PremiumCard(
+          padding: const EdgeInsets.all(ZyvoraDesignSystem.spacing16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('About Zyvora', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
+              Text('About Zyvora', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: ZyvoraDesignSystem.spacing8),
               Text(
                 'Dual Life Productivity System\nReminders · Attendance · Routines\nv1.0.0',
-                style: theme.textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ZyvoraDesignSystem.textSecondary,
+                ),
               ),
             ],
           ),
@@ -279,78 +264,17 @@ class _PushNotificationsTileState extends State<_PushNotificationsTile> {
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
-      return const SettingsTile(
-        icon: Icons.notifications_outlined,
+      return const PremiumListTile(
+        leading: Icon(Icons.notifications_outlined),
         title: 'Notifications',
         subtitle: 'Loading…',
       );
     }
-    return SettingsTile(
-      icon: Icons.notifications_outlined,
+    return PremiumListTile(
+      leading: const Icon(Icons.notifications_outlined),
       title: 'Notifications',
       subtitle: 'Task & attendance alerts',
       trailing: Switch(value: _enabled, onChanged: _write),
-    );
-  }
-}
-
-class SettingsTile extends StatelessWidget {
-  const SettingsTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(ZyvoraRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(ZyvoraRadius.md),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(ZyvoraRadius.md),
-            border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.7),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(icon),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.titleMedium),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(subtitle!, style: theme.textTheme.bodySmall),
-                    ],
-                  ],
-                ),
-              ),
-              trailing ??
-                  (onTap != null
-                      ? const Icon(Icons.chevron_right)
-                      : const SizedBox()),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
