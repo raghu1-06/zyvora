@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../profile/presentation/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -135,17 +136,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(width: 8),
-            const CircleAvatar(
-              radius: 20,
-              backgroundColor: Color(0xFF7C3AED),
-              backgroundImage: null,
-              child: Text(
-                "R",
-                style: TextStyle(
-                  fontFamily: 'Sora',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.white,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              },
+              child: const CircleAvatar(
+                radius: 20,
+                backgroundColor: Color(0xFF7C3AED),
+                backgroundImage: null,
+                child: Text(
+                  "R",
+                  style: TextStyle(
+                    fontFamily: 'Sora',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
