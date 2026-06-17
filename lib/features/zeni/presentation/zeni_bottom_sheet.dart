@@ -262,10 +262,40 @@ class _ZeniBottomSheetState extends ConsumerState<ZeniBottomSheet> {
               ),
             ],
           ),
-          ),
         );
-      }
+      },
     );
+  }
+
+  void _sendMessage([String? text]) {
+    final msgText = text ?? _inputCtrl.text.trim();
+    if (msgText.isEmpty) return;
+    
+    setState(() {
+      _messages.add(Message(id: DateTime.now().toString(), text: msgText, isUser: true, timestamp: DateTime.now()));
+      _inputCtrl.clear();
+      _isLoading = true;
+    });
+    
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
+    });
+
+    // Mock response
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _messages.add(Message(id: DateTime.now().toString(), text: "I'm still learning how to process requests. But I've noted that down!", isUser: false, timestamp: DateTime.now()));
+      });
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollCtrl.hasClients) {
+          _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        }
+      });
+    });
   }
 
   Widget _buildEmptyState() {

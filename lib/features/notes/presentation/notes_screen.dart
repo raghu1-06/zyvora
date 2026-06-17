@@ -97,8 +97,6 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         ],
       ),
     );
-        Navigator.push(context, MaterialPageRoute(builder: (_) => NewNoteScreen(existingNote: note)));
-      
   }
 }
 

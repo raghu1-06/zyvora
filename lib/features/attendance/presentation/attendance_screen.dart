@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/models/subject_model.dart';
 import '../../../core/providers/subjects_provider.dart';
 import '../../../core/providers/sessions_provider.dart';
 import 'subject_detail_screen.dart';
-import '../../../core/theme/app_colors.dart' as colors;
 
 class SubjectStats {
   final SubjectModel subject;
@@ -139,7 +136,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
     return ListView.separated(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 100),
       itemCount: subjects.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         return GestureDetector(
           onTap: () {
