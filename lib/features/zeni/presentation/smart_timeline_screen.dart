@@ -77,9 +77,12 @@ class _SmartTimelineScreenState extends State<SmartTimelineScreen> {
           const SizedBox(height: 16),
           Expanded(
             child: CustomScrollView(
-              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
               slivers: [
-                SliverToBoxAdapter(child: _buildSectionLabel("Actionable Tasks", const Color(0xFF7C3AED))),
+                SliverPadding(
+                  padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                    SliverToBoxAdapter(child: _buildSectionLabel("Actionable Tasks", const Color(0xFF7C3AED))),
                 SliverList(
                   delegate: SliverChildListDelegate([
                     _buildTaskTimelineItem("Finish Physics Lab Report", "Overdue • Yesterday, 11:59 PM", "STUDY", isOverdue: true),
@@ -93,6 +96,9 @@ class _SmartTimelineScreenState extends State<SmartTimelineScreen> {
                     _buildAttendanceTimelineItem("Marked Present", "Mathematics", "10:30 AM"),
                     _buildAttendanceTimelineItem("Marked Absent", "Database Systems", "08:00 AM", isPresent: false),
                   ]),
+                ),
+                    ],
+                  ),
                 ),
               ],
             ),

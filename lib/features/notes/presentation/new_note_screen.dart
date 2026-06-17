@@ -2,15 +2,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import '../../../core/models/note_model.dart';
+import '../../../core/providers/notes_provider.dart';
 
-class NewNoteScreen extends StatefulWidget {
+class NewNoteScreen extends ConsumerStatefulWidget {
   const NewNoteScreen({super.key});
 
   @override
-  State<NewNoteScreen> createState() => _NewNoteScreenState();
+  ConsumerState<NewNoteScreen> createState() => _NewNoteScreenState();
 }
 
-class _NewNoteScreenState extends State<NewNoteScreen> {
+class _NewNoteScreenState extends ConsumerState<NewNoteScreen> {
   final TextEditingController _titleCtrl = TextEditingController();
   final TextEditingController _contentCtrl = TextEditingController();
   
@@ -18,6 +22,8 @@ class _NewNoteScreenState extends State<NewNoteScreen> {
   int _activeTool = 5; // Date tool is default
   Timer? _saveTimer;
   bool _isSaving = false;
+  final String _noteId = const Uuid().v4();
+  bool _isFirstSave = true;
 
   final List<(IconData, String)> _tools = const [
     (Icons.check_box_outline_blank, "To-do"),
@@ -49,14 +55,39 @@ class _NewNoteScreenState extends State<NewNoteScreen> {
   void _onTextChanged() {
     if (_saveTimer?.isActive ?? false) _saveTimer!.cancel();
     setState(() => _isSaving = true);
-    _saveTimer = Timer(const Duration(seconds: 2), () {
+    _saveTimer = Timer(const Duration(seconds: 2), _saveNote);
+  }
+  
+  void _saveNote() {
+    if (_titleCtrl.text.isEmpty && _contentCtrl.text.isEmpty) {
       if (mounted) setState(() => _isSaving = false);
-    });
+      return;
+    }
+    
+    final note = NoteModel(
+      id: _noteId,
+      title: _titleCtrl.text.isEmpty ? "Untitled" : _titleCtrl.text,
+      body: _contentCtrl.text,
+      noteType: 'plain',
+      colorIndex: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    
+    if (_isFirstSave) {
+      ref.read(notesProvider.notifier).add(note);
+      _isFirstSave = false;
+    } else {
+      ref.read(notesProvider.notifier).update(note);
+    }
+    
+    if (mounted) setState(() => _isSaving = false);
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _saveNote();
     _titleCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();

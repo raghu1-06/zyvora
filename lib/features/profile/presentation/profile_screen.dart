@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/providers/tasks_provider.dart';
+import '../../../core/providers/subjects_provider.dart';
+import '../../../core/providers/sessions_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
+import '../../../core/providers/theme_provider.dart';
+
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _notificationsOn = true;
-  bool _focusModeOn = true;
+  bool _focusModeOn = false;
   bool _hapticOn = true;
-  bool _adaptiveOn = true;
-  bool _darkThemeOn = false;
   bool _syncOn = true;
+  bool _adaptiveOn = true;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +118,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProductivitySummary() {
+    int totalTasks = ref.watch(tasksProvider).length;
+    int completedTasks = ref.watch(tasksProvider).where((t) => t.isCompleted).length;
+    String tasksPercent = totalTasks == 0 ? "0%" : "${((completedTasks/totalTasks)*100).toInt()}%";
+    
+    int totalClasses = ref.watch(sessionsProvider).length;
+    int presentClasses = ref.watch(sessionsProvider).where((s) => s.isPresent).length;
+    String attendancePercent = totalClasses == 0 ? "100%" : "${((presentClasses/totalClasses)*100).toInt()}%";
+    int subjectCount = ref.watch(subjectsProvider).length;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.count(
@@ -123,8 +137,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisSpacing: 12,
         childAspectRatio: 1.6,
         children: [
-          _buildStatCard("Tasks completed", "0", "0% done", Icons.check_circle_outline, const Color(0xFFD1FAE5), const Color(0xFF10B981)),
-          _buildStatCard("Attendance %", "100%", "3 subjects", Icons.fact_check_outlined, const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
+          _buildStatCard("Tasks completed", "$completedTasks", "$tasksPercent done", Icons.check_circle_outline, const Color(0xFFD1FAE5), const Color(0xFF10B981)),
+          _buildStatCard("Attendance %", attendancePercent, "$subjectCount subjects", Icons.fact_check_outlined, const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
           _buildStatCard("Current streak", "21", "Days on track", Icons.local_fire_department_outlined, const Color(0xFFFEE2E2), const Color(0xFFEF4444)),
           _buildStatCard("Focus score", "60", "Consistency index", Icons.bolt_outlined, const Color(0xFFFEF3C7), const Color(0xFFF59E0B)),
         ],
@@ -300,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Divider(height: 1, indent: 56, color: Color(0xFFF3F4F6)),
                 _SettingsTile(icon: Icons.vibration, bg: const Color(0xFFE0E7FF), iconCol: const Color(0xFF4F46E5), title: "Haptic Feedback", subtitle: "Vibrations on actions", isSwitch: true, switchVal: _hapticOn, onChanged: (v) => setState(() => _hapticOn = v)),
                 const Divider(height: 1, indent: 56, color: Color(0xFFF3F4F6)),
-                _SettingsTile(icon: Icons.dark_mode_outlined, bg: const Color(0xFFF3F4F6), iconCol: const Color(0xFF4B5563), title: "Dark Theme", subtitle: "Easy on the eyes", isSwitch: true, switchVal: _darkThemeOn, onChanged: (v) => setState(() => _darkThemeOn = v)),
+                _SettingsTile(icon: Icons.dark_mode_outlined, bg: const Color(0xFFF3F4F6), iconCol: const Color(0xFF4B5563), title: "Dark Theme", subtitle: "Easy on the eyes", isSwitch: true, switchVal: ref.watch(themeProvider) == ThemeMode.dark, onChanged: (v) => ref.read(themeProvider.notifier).toggleTheme(v)),
               ],
             ),
           ),
@@ -402,7 +416,7 @@ class _SettingsTile extends StatelessWidget {
       title: Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF1E1B33))),
       subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
       trailing: isSwitch
-          ? Switch(value: switchVal, onChanged: onChanged, activeColor: const Color(0xFF7C3AED))
+          ? Switch(value: switchVal, onChanged: onChanged, activeColor: const Color(0xFF7C3AED), activeTrackColor: const Color(0xFF7C3AED).withValues(alpha: 0.5))
           : (isArrow ? const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)) : null),
       onTap: isSwitch ? () => onChanged?.call(!switchVal) : () {},
     );

@@ -21,7 +21,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.cardBg,
         elevation: 0,
         clipBehavior: Clip.antiAlias,
@@ -61,7 +61,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.darkCard,
         elevation: 0,
         clipBehavior: Clip.antiAlias,

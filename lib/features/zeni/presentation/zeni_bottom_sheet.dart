@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../data/zeni_repository.dart';
+import '../../../core/models/task_model.dart';
+import '../../../core/models/note_model.dart';
+import '../../../core/models/subject_model.dart';
+import '../../../core/models/session_model.dart';
+import '../../../core/providers/tasks_provider.dart';
+import '../../../core/providers/notes_provider.dart';
+import '../../../core/providers/subjects_provider.dart';
+import '../../../core/providers/sessions_provider.dart';
 
 class Message {
   final String text;
@@ -9,14 +19,14 @@ class Message {
   Message(this.text, this.isUser);
 }
 
-class ZeniBottomSheet extends StatefulWidget {
+class ZeniBottomSheet extends ConsumerStatefulWidget {
   const ZeniBottomSheet({super.key});
 
   @override
-  State<ZeniBottomSheet> createState() => _ZeniBottomSheetState();
+  ConsumerState<ZeniBottomSheet> createState() => _ZeniBottomSheetState();
 }
 
-class _ZeniBottomSheetState extends State<ZeniBottomSheet> {
+class _ZeniBottomSheetState extends ConsumerState<ZeniBottomSheet> {
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final List<Message> _messages = [];
@@ -99,10 +109,43 @@ class _ZeniBottomSheetState extends State<ZeniBottomSheet> {
     String responseText = "";
     if (result is ZeniTaskCreated) {
       responseText = "✅ Created task: ${result.title} [${result.priority} priority, ${result.category}]";
+      ref.read(tasksProvider.notifier).add(TaskModel(
+        id: const Uuid().v4(),
+        title: result.title,
+        dueDate: result.dueDate.isNotEmpty ? DateTime.tryParse(result.dueDate) : null,
+        dueTime: result.dueTime.isNotEmpty ? result.dueTime : null,
+        priority: result.priority,
+        category: result.category,
+        createdAt: DateTime.now(),
+      ));
     } else if (result is ZeniAttendanceLogged) {
       responseText = "✅ Marked ${result.subject} as ${result.isPresent ? 'Present' : 'Absent'}.";
+      final subjects = ref.read(subjectsProvider);
+      SubjectModel? subject;
+      try {
+        subject = subjects.firstWhere((s) => s.name.toLowerCase() == result.subject.toLowerCase());
+      } catch (e) {
+        subject = SubjectModel(id: const Uuid().v4(), name: result.subject);
+        ref.read(subjectsProvider.notifier).add(subject);
+      }
+      ref.read(sessionsProvider.notifier).add(SessionModel(
+        id: const Uuid().v4(),
+        subjectId: subject.id,
+        isPresent: result.isPresent,
+        sessionType: 'Lecture',
+        date: DateTime.now(),
+      ));
     } else if (result is ZeniNoteCreated) {
       responseText = "✅ Created note: ${result.title}";
+      ref.read(notesProvider.notifier).add(NoteModel(
+        id: const Uuid().v4(),
+        title: result.title,
+        body: result.body,
+        noteType: 'plain',
+        colorIndex: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
     } else if (result is ZeniChatResponse) {
       responseText = result.message;
     } else if (result is ZeniError) {

@@ -1,52 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/models/task_model.dart';
+import '../../../core/providers/tasks_provider.dart';
 
-// Sample data models and list for local state
-class _Task {
-  String id;
-  String title;
-  bool isCompleted;
-  bool isOverdue;
-  List<String> subtasks;
-  bool isExpanded;
-  String category;
-  String time;
-
-  _Task({
-    required this.id,
-    required this.title,
-    this.isCompleted = false,
-    this.isOverdue = false,
-    this.subtasks = const [],
-    this.isExpanded = false,
-    required this.category,
-    required this.time,
-  });
-}
-
-class TasksScreen extends StatefulWidget {
+class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
 
   @override
-  State<TasksScreen> createState() => _TasksScreenState();
+  ConsumerState<TasksScreen> createState() => _TasksScreenState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
+class _TasksScreenState extends ConsumerState<TasksScreen> {
   bool _showBanner = true;
   int _viewIndex = 0; // 0=Timeline, 1=Kanban, 2=Matrix, 3=Zen
   int _filterIndex = 0; // 0=All, 1=Today, 2=Overdue, 3=Done
 
-  final List<_Task> _tasks = [
-    _Task(id: '1', title: 'maths', category: 'Study', time: '10:01 AM', subtasks: ['Finish chapter 1', 'Do exercises']),
-    _Task(id: '2', title: 'physics', category: 'Study', time: '10:02 AM', isCompleted: true),
-    _Task(id: '3', title: 'chemistry', category: 'Study', time: 'Yesterday', isOverdue: true),
-    _Task(id: '4', title: 'Call John', category: 'Personal', time: '08:00 PM'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+    
+    List<TaskModel> allTasks = ref.watch(tasksProvider);
+    List<TaskModel> filteredTasks = allTasks;
+    
+    if (_filterIndex == 1) { // Today
+      filteredTasks = ref.watch(tasksProvider.notifier).todayTasks;
+    } else if (_filterIndex == 2) { // Overdue
+      filteredTasks = ref.watch(tasksProvider.notifier).overdueTasks;
+    } else if (_filterIndex == 3) { // Done
+      filteredTasks = allTasks.where((t) => t.isCompleted).toList();
+    }
     
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -80,10 +66,10 @@ class _TasksScreenState extends State<TasksScreen> {
                   child: IndexedStack(
                     index: _viewIndex,
                     children: [
-                      _buildTimelineView(),
-                      _buildKanbanView(),
-                      _buildMatrixView(),
-                      _buildZenView(),
+                      _buildTimelineView(filteredTasks),
+                      _buildKanbanView(filteredTasks),
+                      _buildMatrixView(filteredTasks),
+                      _buildZenView(filteredTasks),
                     ],
                   ),
                 ),
@@ -387,23 +373,12 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
                 child: Row(
                   children: [
-                    Text(
-                      filters[index],
-                      style: isActive 
-                        ? GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF7C3AED))
-                        : GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF)),
-                    ),
-                    if (isActive) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 18,
-                        height: 18,
-                        decoration: const BoxDecoration(color: Color(0xFF7C3AED), shape: BoxShape.circle),
-                        child: const Center(
-                          child: Text("4", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-                        ),
+                      Text(
+                        filters[index],
+                        style: isActive 
+                          ? GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF7C3AED))
+                          : GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF)),
                       ),
-                    ],
                   ],
                 ),
               ),
@@ -414,7 +389,7 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildTimelineView() {
+  Widget _buildTimelineView(List<TaskModel> tasks) {
     return ListView(
       padding: const EdgeInsets.only(top: 8),
       physics: const NeverScrollableScrollPhysics(),
@@ -453,7 +428,7 @@ class _TasksScreenState extends State<TasksScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20),
               child: Column(
-                children: _tasks.map((task) => _TaskCard(task: task)).toList(),
+                children: tasks.map((task) => _TaskCard(task: task)).toList(),
               ),
             ),
           ],
@@ -462,9 +437,9 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildKanbanView() {
-    final todo = _tasks.where((t) => !t.isCompleted).toList();
-    final done = _tasks.where((t) => t.isCompleted).toList();
+  Widget _buildKanbanView(List<TaskModel> tasks) {
+    final todo = tasks.where((t) => !t.isCompleted).toList();
+    final done = tasks.where((t) => t.isCompleted).toList();
     
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -480,7 +455,7 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildKanbanColumn(String title, List<_Task> tasks) {
+  Widget _buildKanbanColumn(String title, List<TaskModel> tasks) {
     return Container(
       width: 280,
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -514,7 +489,7 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildMatrixView() {
+  Widget _buildMatrixView(List<TaskModel> tasks) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GridView.count(
@@ -552,8 +527,8 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildZenView() {
-    final currentTask = _tasks.where((t) => !t.isCompleted).firstOrNull;
+  Widget _buildZenView(List<TaskModel> tasks) {
+    final currentTask = tasks.where((t) => !t.isCompleted).firstOrNull;
     
     return Center(
       child: Container(
@@ -625,15 +600,15 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 }
 
-class _TaskCard extends StatefulWidget {
-  final _Task task;
+class _TaskCard extends ConsumerStatefulWidget {
+  final TaskModel task;
   const _TaskCard({required this.task});
 
   @override
-  State<_TaskCard> createState() => _TaskCardState();
+  ConsumerState<_TaskCard> createState() => _TaskCardState();
 }
 
-class _TaskCardState extends State<_TaskCard> {
+class _TaskCardState extends ConsumerState<_TaskCard> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
@@ -671,7 +646,7 @@ class _TaskCardState extends State<_TaskCard> {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        if (mounted) setState(() => task.isCompleted = !task.isCompleted);
+                        ref.read(tasksProvider.notifier).toggleComplete(task.id);
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -683,7 +658,10 @@ class _TaskCardState extends State<_TaskCard> {
                           border: task.isCompleted ? null : Border.all(color: const Color(0xFFD1D5DB), width: 2),
                         ),
                         child: task.isCompleted ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
-                      ),
+                      ).animate(target: task.isCompleted ? 1 : 0)
+                       .scale(begin: const Offset(0.7, 0.7))
+                       .then()
+                       .shimmer(),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -698,35 +676,36 @@ class _TaskCardState extends State<_TaskCard> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        if (mounted) setState(() => task.isExpanded = !task.isExpanded);
-                      },
+                      onTap: () {},
                       child: const Icon(Icons.more_vert, color: Color(0xFF9CA3AF), size: 18),
                     ),
                   ],
                 ),
-                if (task.isExpanded) ...[
+                if (task.subtaskTitles.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.only(left: 38, top: 10),
                     child: Column(
                       children: [
-                        for (var subtask in task.subtasks)
+                        for (int i = 0; i < task.subtaskTitles.length; i++)
                           Container(
                             margin: const EdgeInsets.only(bottom: 6),
                             child: Row(
                               children: [
                                 GestureDetector(
+                                  onTap: () => ref.read(tasksProvider.notifier).toggleSubtask(task.id, i),
                                   child: Container(
                                     width: 18,
                                     height: 18,
                                     decoration: BoxDecoration(
+                                      color: task.subtaskDone[i] ? const Color(0xFF7C3AED) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
+                                      border: task.subtaskDone[i] ? null : Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
                                     ),
+                                    child: task.subtaskDone[i] ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(subtask, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E1B33)))),
+                                Expanded(child: Text(task.subtaskTitles[i], style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E1B33), decoration: task.subtaskDone[i] ? TextDecoration.lineThrough : null))),
                                 const Icon(Icons.close, color: Color(0xFF9CA3AF), size: 14),
                               ],
                             ),
@@ -750,18 +729,23 @@ class _TaskCardState extends State<_TaskCard> {
           ),
         ),
       ],
-    );
+    ).animate().slideY(begin: 0.3).fadeIn(duration: 300.ms);
   }
 }
 
-class _NewTaskSheet extends StatefulWidget {
+class _NewTaskSheet extends ConsumerStatefulWidget {
   const _NewTaskSheet();
 
   @override
-  State<_NewTaskSheet> createState() => _NewTaskSheetState();
+  ConsumerState<_NewTaskSheet> createState() => _NewTaskSheetState();
 }
 
-class _NewTaskSheetState extends State<_NewTaskSheet> {
+class _NewTaskSheetState extends ConsumerState<_NewTaskSheet> {
+  final _titleCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  String _category = 'Personal';
+  final String _priority = "Medium";
+  bool _hasReminder = false;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -780,6 +764,7 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
           Text("New Task", style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33))),
           const SizedBox(height: 16),
           TextField(
+            controller: _titleCtrl,
             decoration: InputDecoration(
               hintText: "Title",
               filled: true,
@@ -790,6 +775,7 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
           ),
           const SizedBox(height: 12),
           TextField(
+            controller: _notesCtrl,
             maxLines: 3,
             decoration: InputDecoration(
               hintText: "Notes (Markdown supported)",
@@ -825,7 +811,7 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text("Set Reminder / Alarm", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
-              Switch(value: false, onChanged: (v) {}, activeColor: const Color(0xFF7C3AED)),
+              Switch(value: _hasReminder, onChanged: (v) => setState(() => _hasReminder = v), activeColor: const Color(0xFF7C3AED), activeTrackColor: const Color(0xFF7C3AED).withValues(alpha: 0.5)),
             ],
           ),
           const SizedBox(height: 12),
@@ -834,10 +820,13 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
             child: Row(
               children: ["Study", "Work", "Personal", "Health", "Finance"].map((c) => Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(c, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF4B5563))),
-                  backgroundColor: const Color(0xFFF3F4F6),
-                  side: BorderSide.none,
+                child: GestureDetector(
+                  onTap: () => setState(() => _category = c),
+                  child: Chip(
+                    label: Text(c, style: GoogleFonts.inter(fontSize: 12, color: _category == c ? Colors.white : const Color(0xFF4B5563))),
+                    backgroundColor: _category == c ? const Color(0xFF7C3AED) : const Color(0xFFF3F4F6),
+                    side: BorderSide.none,
+                  ),
                 ),
               )).toList(),
             ),
@@ -875,7 +864,18 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
               borderRadius: BorderRadius.circular(50),
             ),
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (_titleCtrl.text.isEmpty) return;
+                ref.read(tasksProvider.notifier).add(TaskModel(
+                  id: const Uuid().v4(),
+                  title: _titleCtrl.text.trim(),
+                  notes: _notesCtrl.text.trim(),
+                  category: _category,
+                  priority: _priority,
+                  createdAt: DateTime.now(),
+                ));
+                Navigator.pop(context);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,

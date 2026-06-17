@@ -1,43 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/models/note_model.dart';
+import '../../../core/providers/notes_provider.dart';
 import 'new_note_screen.dart';
 
-class Note {
-  final String title;
-  final String preview;
-  final bool hasCheckboxes;
-  final String timeAgo;
-
-  Note({required this.title, required this.preview, required this.timeAgo, this.hasCheckboxes = false});
-}
-
-class NotesScreen extends StatefulWidget {
+class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
 
   @override
-  State<NotesScreen> createState() => _NotesScreenState();
+  ConsumerState<NotesScreen> createState() => _NotesScreenState();
 }
 
-class _NotesScreenState extends State<NotesScreen> {
+class _NotesScreenState extends ConsumerState<NotesScreen> {
   final List<Color> _borderColors = const [
     Color(0xFF06B6D4), Color(0xFFEC4899), Color(0xFF10B981),
     Color(0xFFF59E0B), Color(0xFF7C3AED), Color(0xFFEF4444)
   ];
 
-  final List<Note> _notes = [
-    Note(title: "Project Ideas", preview: "Build a new Flutter app\nAdd AI features\nRefactor navigation", timeAgo: "2 hours ago", hasCheckboxes: true),
-    Note(title: "Grocery List", preview: "Milk\nEggs\nBread", timeAgo: "Yesterday", hasCheckboxes: true),
-    Note(title: "Meeting Notes", preview: "Discussed the new UI design. Need to ensure that the masonry grid view works correctly on all device sizes.", timeAgo: "2 days ago"),
-    Note(title: "Random Thoughts", preview: "Why is the sky blue? I need to look that up later.", timeAgo: "Last week"),
-    Note(title: "Books to Read", preview: "1. The Pragmatic Programmer\n2. Clean Code", timeAgo: "Last month"),
-    Note(title: "Workout Plan", preview: "Push\nPull\nLegs\nRest", timeAgo: "Last month"),
-  ];
+
 
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+    final notes = ref.watch(notesProvider);
     
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -59,9 +47,9 @@ class _NotesScreenState extends State<NotesScreen> {
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                  itemCount: _notes.length,
+                  itemCount: notes.length,
                   itemBuilder: (context, index) {
-                    final note = _notes[index];
+                    final note = notes[index];
                     final color = _borderColors[index % _borderColors.length];
                     return _NoteCard(note: note, borderColor: color);
                   },
@@ -99,16 +87,19 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 }
 
-class _NoteCard extends StatelessWidget {
-  final Note note;
+class _NoteCard extends ConsumerWidget {
+  final NoteModel note;
   final Color borderColor;
 
   const _NoteCard({required this.note, required this.borderColor});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () {},
+      onLongPress: () {
+        ref.read(notesProvider.notifier).delete(note.id);
+      },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -126,7 +117,7 @@ class _NoteCard extends StatelessWidget {
           children: [
             Text(note.title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33)), maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 6),
-            if (note.hasCheckboxes)
+            if (note.body.contains('- [ ]') || note.body.contains('- [x]'))
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -141,14 +132,14 @@ class _NoteCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(note.preview, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6B7280)), maxLines: 3, overflow: TextOverflow.ellipsis),
+                    child: Text(note.body.replaceAll('- [ ]', '').replaceAll('- [x]', '').trim(), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6B7280)), maxLines: 3, overflow: TextOverflow.ellipsis),
                   ),
                 ],
               )
             else
-              Text(note.preview, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7280)), maxLines: 3, overflow: TextOverflow.ellipsis),
+              Text(note.body, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7280)), maxLines: 3, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
-            Text(note.timeAgo, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF9CA3AF))),
+            Text(note.createdAt.toString().substring(0, 10), style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF9CA3AF))),
           ],
         ),
       ),

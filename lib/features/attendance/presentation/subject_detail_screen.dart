@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
-import 'attendance_screen.dart';
+import '../../../core/models/subject_model.dart';
+import '../../../core/models/session_model.dart';
+import '../../../core/providers/sessions_provider.dart';
 
-class SubjectDetailScreen extends StatefulWidget {
-  final Subject subject;
+class SubjectDetailScreen extends ConsumerStatefulWidget {
+  final SubjectModel subject;
   
   const SubjectDetailScreen({super.key, required this.subject});
 
   @override
-  State<SubjectDetailScreen> createState() => _SubjectDetailScreenState();
+  ConsumerState<SubjectDetailScreen> createState() => _SubjectDetailScreenState();
 }
 
-class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTickerProviderStateMixin {
+class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -30,6 +34,14 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    final sessions = ref.watch(sessionsProvider).where((s) => s.subjectId == widget.subject.id).toList();
+    final total = sessions.length;
+    final present = sessions.where((s) => s.isPresent).length;
+    final pct = total == 0 ? 0.0 : (present / total) * 100;
+    
+    int maxTotalFor75 = (present / 0.75).floor();
+    int safeBunks = total == 0 ? 0 : ((maxTotalFor75 - total) > 0 ? (maxTotalFor75 - total) : 0);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -59,8 +71,8 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
         controller: _tabController,
         children: [
           _buildCalendarTab(),
-          _buildAnalysisTab(),
-          _buildSessionsTab(),
+          _buildAnalysisTab(pct, total, safeBunks),
+          _buildSessionsTab(sessions),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -160,8 +172,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
     );
   }
 
-  Widget _buildAnalysisTab() {
-    final pct = widget.subject.percent;
+  Widget _buildAnalysisTab(double pct, int total, int safeBunks) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -194,7 +205,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
             _statBox("Required", "75%", const Color(0xFFF3F4F6), const Color(0xFF1E1B33)),
             _statBox("Target", "80%", const Color(0xFFF3F4F6), const Color(0xFF1E1B33)),
             _statBox("Streak", "3 Days", const Color(0xFFFEF3C7), const Color(0xFFF59E0B)),
-            _statBox("Sessions", "${widget.subject.total}", const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
+            _statBox("Sessions", "$total", const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
           ],
         ),
         const SizedBox(height: 24),
@@ -212,7 +223,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("${widget.subject.safeBunks}", style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF10B981))),
+                        Text("$safeBunks", style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF10B981))),
                         Text("Safe bunks available", style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6B7280))),
                       ],
                     ),
@@ -263,23 +274,18 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
     );
   }
 
-  Widget _buildSessionsTab() {
+  Widget _buildSessionsTab(List<SessionModel> sessions) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text("Wed, 10 Jun", style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
-        const SizedBox(height: 12),
-        _sessionRow(true, "Lecture", "10:00 AM - 11:00 AM"),
-        _sessionRow(false, "Lab", "11:00 AM - 01:00 PM"),
-        const SizedBox(height: 20),
-        Text("Tue, 9 Jun", style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
-        const SizedBox(height: 12),
-        _sessionRow(true, "Lecture", "10:00 AM - 11:00 AM"),
+        for (var session in sessions)
+          _sessionRow(session),
       ],
     );
   }
 
-  Widget _sessionRow(bool present, String name, String time) {
+  Widget _sessionRow(SessionModel session) {
+    bool present = session.isPresent;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -300,12 +306,15 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
-                Text(time, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
+                Text(session.sessionType, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
+                Text(session.date.toString().substring(0, 10), style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
               ],
             ),
           ),
-          const Icon(Icons.more_vert, size: 16, color: Color(0xFF9CA3AF)),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
+            onPressed: () => ref.read(sessionsProvider.notifier).delete(session.id),
+          ),
         ],
       ),
     );
@@ -324,10 +333,10 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
             const SizedBox(height: 20),
             Text("Mark Attendance", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            _markOption(Icons.check_circle_outline, "Mark Present", const Color(0xFF10B981), const Color(0xFFD1FAE5)),
-            _markOption(Icons.cancel_outlined, "Mark Absent", const Color(0xFFEF4444), const Color(0xFFFEE2E2)),
-            _markOption(Icons.undo, "Unmark", const Color(0xFF6B7280), const Color(0xFFF3F4F6)),
-            _markOption(Icons.add_circle_outline, "Add Extra Session", const Color(0xFF7C3AED), const Color(0xFFEDE9FE)),
+            _markOption(Icons.check_circle_outline, "Mark Present", const Color(0xFF10B981), const Color(0xFFD1FAE5), 'Present'),
+            _markOption(Icons.cancel_outlined, "Mark Absent", const Color(0xFFEF4444), const Color(0xFFFEE2E2), 'Absent'),
+            _markOption(Icons.undo, "Unmark", const Color(0xFF6B7280), const Color(0xFFF3F4F6), 'Unmark'),
+            _markOption(Icons.add_circle_outline, "Add Extra Session", const Color(0xFF7C3AED), const Color(0xFFEDE9FE), 'Extra'),
             const SizedBox(height: 12),
             TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel", style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF6B7280)))),
           ],
@@ -336,14 +345,25 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> with SingleTi
     );
   }
 
-  Widget _markOption(IconData icon, String label, Color color, Color bg) {
+  Widget _markOption(IconData icon, String label, Color color, Color bg, String action) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: bg.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(12), border: Border.all(color: bg)),
       child: ListTile(
         leading: Icon(icon, color: color),
         title: Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: color)),
-        onTap: () {},
+        onTap: () {
+          if (action == 'Present' || action == 'Absent') {
+             ref.read(sessionsProvider.notifier).add(SessionModel(
+               id: const Uuid().v4(),
+               subjectId: widget.subject.id,
+               isPresent: action == 'Present',
+               sessionType: 'Lecture',
+               date: DateTime.now(),
+             ));
+          }
+          Navigator.pop(context);
+        },
       ),
     );
   }

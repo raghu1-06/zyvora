@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/models/subject_model.dart';
+import '../../../core/providers/subjects_provider.dart';
+import '../../../core/providers/sessions_provider.dart';
 import 'subject_detail_screen.dart';
 
-class Subject {
-  final String id;
-  final String name;
+class SubjectStats {
+  final SubjectModel subject;
   final int present;
   final int total;
   
-  Subject({required this.id, required this.name, required this.present, required this.total});
+  SubjectStats({required this.subject, required this.present, required this.total});
   
   double get percent => total == 0 ? 0.0 : (present / total) * 100;
   
   int get safeBunks {
-    // How many classes can be missed while staying above 75%
-    // (present) / (total + x) >= 0.75
-    // x <= (present / 0.75) - total
     if (total == 0) return 0;
     int maxTotalFor75 = (present / 0.75).floor();
     int safe = maxTotalFor75 - total;
@@ -25,22 +26,17 @@ class Subject {
   }
 }
 
-class AttendanceScreen extends StatefulWidget {
+class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
 
   @override
-  State<AttendanceScreen> createState() => _AttendanceScreenState();
+  ConsumerState<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerProviderStateMixin {
+class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   
-  final List<Subject> _subjects = [
-    Subject(id: '1', name: 'Maths', present: 30, total: 35), // ~85%
-    Subject(id: '2', name: 'Physics', present: 22, total: 30), // ~73%
-    Subject(id: '3', name: 'English', present: 28, total: 28), // 100%
-    Subject(id: '4', name: 'DBMS', present: 15, total: 28), // ~53%
-  ];
+
 
   @override
   void initState() {
@@ -57,6 +53,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
+    
+    final allSubjects = ref.watch(subjectsProvider);
+    final allSessions = ref.watch(sessionsProvider);
+    
+    final subjects = allSubjects.map((s) {
+      final sessions = allSessions.where((session) => session.subjectId == s.id);
+      final total = sessions.length;
+      final present = sessions.where((s) => s.isPresent).length;
+      return SubjectStats(subject: s, present: present, total: total);
+    }).toList();
     
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -103,8 +109,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildSubjectsTab(),
-                _buildAnalyticsTab(),
+                _buildSubjectsTab(subjects),
+                _buildAnalyticsTab(subjects),
               ],
             ),
           ),
@@ -113,25 +119,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildSubjectsTab() {
+  Widget _buildSubjectsTab(List<SubjectStats> subjects) {
     return ListView.separated(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 100),
-      itemCount: _subjects.length,
+      itemCount: subjects.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         return GestureDetector(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => SubjectDetailScreen(subject: _subjects[index])));
+            Navigator.push(context, MaterialPageRoute(builder: (_) => SubjectDetailScreen(subject: subjects[index].subject)));
           },
-          child: _SubjectCard(subject: _subjects[index]),
+          child: _SubjectCard(subject: subjects[index]),
         );
       },
     );
   }
 
-  Widget _buildAnalyticsTab() {
-    double totalPresent = _subjects.fold(0, (sum, item) => sum + item.present);
-    double totalClasses = _subjects.fold(0, (sum, item) => sum + item.total);
+  Widget _buildAnalyticsTab(List<SubjectStats> subjects) {
+    double totalPresent = subjects.fold(0, (sum, item) => sum + item.present);
+    double totalClasses = subjects.fold(0, (sum, item) => sum + item.total);
     double overallPct = totalClasses == 0 ? 0 : (totalPresent / totalClasses) * 100;
     
     return ListView(
@@ -187,11 +193,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFDDD6FE))),
           child: Column(
-            children: _subjects.map((s) => Padding(
+            children: subjects.map((s) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  SizedBox(width: 60, child: Text(s.name, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
+                  SizedBox(width: 60, child: Text(s.subject.name, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ClipRRect(
@@ -258,12 +264,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
 }
 
 class _SubjectCard extends StatelessWidget {
-  final Subject subject;
+  final SubjectStats subject;
   
   const _SubjectCard({required this.subject});
 
   (IconData, Color) _getStyle() {
-    final n = subject.name.toLowerCase();
+    final n = subject.subject.name.toLowerCase();
     if (n.contains('math')) return (Icons.calculate_outlined, const Color(0xFF8B5CF6));
     if (n.contains('phys')) return (Icons.science_outlined, const Color(0xFF60A5FA));
     if (n.contains('eng')) return (Icons.menu_book_outlined, const Color(0xFFFB923C));
@@ -320,7 +326,7 @@ class _SubjectCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(subject.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
+                    Text(subject.subject.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -366,8 +372,15 @@ class _SubjectCard extends StatelessWidget {
   }
 }
 
-class _AddSubjectSheet extends StatelessWidget {
+class _AddSubjectSheet extends ConsumerStatefulWidget {
   const _AddSubjectSheet();
+
+  @override
+  ConsumerState<_AddSubjectSheet> createState() => _AddSubjectSheetState();
+}
+
+class _AddSubjectSheetState extends ConsumerState<_AddSubjectSheet> {
+  final _nameCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +395,7 @@ class _AddSubjectSheet extends StatelessWidget {
           Text("Add Subject", style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33))),
           const SizedBox(height: 16),
           TextField(
+            controller: _nameCtrl,
             decoration: InputDecoration(
               hintText: "Subject Name (e.g. Mathematics)",
               filled: true,
@@ -395,7 +409,14 @@ class _AddSubjectSheet extends StatelessWidget {
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (_nameCtrl.text.isEmpty) return;
+                ref.read(subjectsProvider.notifier).add(SubjectModel(
+                  id: const Uuid().v4(),
+                  name: _nameCtrl.text.trim(),
+                ));
+                Navigator.pop(context);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF7C3AED),
                 foregroundColor: Colors.white,

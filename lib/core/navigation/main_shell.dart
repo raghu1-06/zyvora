@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
@@ -64,10 +65,10 @@ class ZyvoraNavBar extends StatelessWidget {
         Container(
           height: 68 + bottomPadding,
           padding: EdgeInsets.only(bottom: bottomPadding),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFFFFF),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF111128) : const Color(0xFFFFFFFF),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: const [
               BoxShadow(
                 color: Color(0x14000000),
                 blurRadius: 16,
@@ -137,7 +138,8 @@ class ZyvoraNavBar extends StatelessWidget {
                   color: Colors.white,
                   size: 28,
                 ),
-              ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true))
+               .scale(begin: const Offset(0.95, 0.95), end: const Offset(1.05, 1.05), duration: 1500.ms),
             ),
           ),
         ),
@@ -163,7 +165,10 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? const Color(0xFF7C3AED) : const Color(0xFF9CA3AF);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isSelected 
+        ? (isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED)) 
+        : const Color(0xFF9CA3AF);
     
     return GestureDetector(
       onTap: onTap,
@@ -175,9 +180,10 @@ class _NavBarItem extends StatelessWidget {
           children: [
             Icon(
               isSelected ? iconRounded : iconOutlined,
+              key: ValueKey(isSelected),
               color: color,
               size: 24,
-            ),
+            ).animate(target: isSelected ? 1 : 0).scale(begin: const Offset(0.8, 0.8), duration: 150.ms),
             const SizedBox(height: 4),
             Text(
               label,

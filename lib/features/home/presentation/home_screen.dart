@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../zeni/presentation/smart_timeline_screen.dart';
+import '../../../core/providers/tasks_provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isProfessional = true;
 
   String _getGreeting() {
@@ -159,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ],
-    );
+    ).animate().slideX(begin: -0.1).fadeIn();
   }
 
   Widget _buildToggle() {
@@ -310,6 +313,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildOverview() {
+    final pendingTasks = ref.watch(tasksProvider.notifier).pendingTasks.length;
+    final allTasks = ref.watch(tasksProvider);
+    final completed = allTasks.where((t) => t.isCompleted).length;
+    final pct = allTasks.isEmpty ? 0 : (completed / allTasks.length * 100).toInt();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -324,10 +332,10 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.zero,
           children: [
-            _StatCard(iconBg: const Color(0xFFEDE9FE), icon: Icons.assignment_outlined, iconColor: const Color(0xFF7C3AED), value: "4", label: "Pending Tasks", sublabel: "4 from today"),
-            _StatCard(iconBg: const Color(0xFFD1FAE5), icon: Icons.fact_check_outlined, iconColor: const Color(0xFF10B981), value: "100%", label: "Today's Attendance", sublabel: "3 subjects"),
-            _StatCard(iconBg: const Color(0xFFFEF3C7), icon: Icons.notifications_outlined, iconColor: const Color(0xFFF59E0B), value: "0", label: "Reminders", sublabel: "Upcoming tasks"),
-            _StatCard(iconBg: const Color(0xFFCFFAFE), icon: Icons.trending_up_rounded, iconColor: const Color(0xFF06B6D4), value: "0%", label: "Completion Rate", sublabel: "This week"),
+            _StatCard(iconBg: const Color(0xFFEDE9FE), icon: Icons.assignment_outlined, iconColor: const Color(0xFF7C3AED), value: "$pendingTasks", label: "Pending Tasks", sublabel: "Total pending").animate().slideY(begin: 0.2).fadeIn(delay: 0.ms),
+            _StatCard(iconBg: const Color(0xFFD1FAE5), icon: Icons.fact_check_outlined, iconColor: const Color(0xFF10B981), value: "100%", label: "Today's Attendance", sublabel: "All classes attended").animate().slideY(begin: 0.2).fadeIn(delay: 100.ms),
+            _StatCard(iconBg: const Color(0xFFFEF3C7), icon: Icons.notifications_outlined, iconColor: const Color(0xFFF59E0B), value: "0", label: "Reminders", sublabel: "Upcoming tasks").animate().slideY(begin: 0.2).fadeIn(delay: 200.ms),
+            _StatCard(iconBg: const Color(0xFFCFFAFE), icon: Icons.trending_up_rounded, iconColor: const Color(0xFF06B6D4), value: "$pct%", label: "Completion Rate", sublabel: "Overall").animate().slideY(begin: 0.2).fadeIn(delay: 300.ms),
           ],
         ),
       ],
@@ -460,11 +468,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: IntrinsicHeight(
             child: Row(
               children: [
-                _InsightCol(icon: Icons.local_fire_department, iconBg: const Color(0xFFFEE2E2), iconColor: const Color(0xFFEF4444), value: "20", label: "Day Streak", subtext: "You're on fire!"),
+                _InsightCol(icon: Icons.local_fire_department, iconBg: const Color(0xFFFEE2E2), iconColor: const Color(0xFFEF4444), value: "1", label: "Day Streak", subtext: "Keep it up!"),
                 const VerticalDivider(width: 1, color: Color(0xFFF3F4F6), thickness: 1),
-                _InsightCol(icon: Icons.check_circle_outline, iconBg: const Color(0xFFD1FAE5), iconColor: const Color(0xFF10B981), value: "0", label: "Completed Today", subtext: "Great progress!"),
+                _InsightCol(icon: Icons.check_circle_outline, iconBg: const Color(0xFFD1FAE5), iconColor: const Color(0xFF10B981), value: "${ref.watch(tasksProvider).where((t) => t.isCompleted).length}", label: "Total Completed", subtext: "Great progress!"),
                 const VerticalDivider(width: 1, color: Color(0xFFF3F4F6), thickness: 1),
-                _InsightCol(icon: Icons.bolt_rounded, iconBg: const Color(0xFFEDE9FE), iconColor: const Color(0xFF7C3AED), value: "45", label: "Productivity Score", subtext: "Keep going!"),
+                _InsightCol(icon: Icons.bolt_rounded, iconBg: const Color(0xFFEDE9FE), iconColor: const Color(0xFF7C3AED), value: "85", label: "Productivity Score", subtext: "Keep going!"),
               ],
             ),
           ),
@@ -474,11 +482,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSmartTimeline() {
-    final sampleItems = [
-      ["maths", "10:01 AM"],
-      ["physics", "10:02 AM"],
-      ["chemistry", "10:02 AM"],
-    ];
+    final tasks = ref.watch(tasksProvider);
+    final sampleItems = tasks.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(sampleItems[index][0], style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
+                          Text(sampleItems[index].title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
                           const SizedBox(height: 3),
                           Row(
                             children: [
@@ -540,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Text("TASK", style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF7C3AED), letterSpacing: 0.5)),
                               ),
                               const Spacer(),
-                              Text(sampleItems[index][1], style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
+                              Text(sampleItems[index].dueTime ?? "", style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
                             ],
                           ),
                         ],
