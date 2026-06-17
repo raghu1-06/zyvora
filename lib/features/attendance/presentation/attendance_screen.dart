@@ -8,6 +8,7 @@ import '../../../core/models/subject_model.dart';
 import '../../../core/providers/subjects_provider.dart';
 import '../../../core/providers/sessions_provider.dart';
 import 'subject_detail_screen.dart';
+import '../../../core/theme/app_colors.dart' as colors;
 
 class SubjectStats {
   final SubjectModel subject;
@@ -120,6 +121,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
   }
 
   Widget _buildSubjectsTab(List<SubjectStats> subjects) {
+    if (subjects.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.book_outlined, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            Text("No subjects yet", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            Text("Tap + to add your first subject", style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
+    
     return ListView.separated(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 100),
       itemCount: subjects.length,
@@ -139,6 +155,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
     double totalPresent = subjects.fold(0, (sum, item) => sum + item.present);
     double totalClasses = subjects.fold(0, (sum, item) => sum + item.total);
     double overallPct = totalClasses == 0 ? 0 : (totalPresent / totalClasses) * 100;
+    
+    int overallSafeBunks = subjects.fold(0, (sum, item) => sum + item.safeBunks);
+    
+    SubjectStats? strongest;
+    SubjectStats? weakest;
+    if (subjects.isNotEmpty) {
+      strongest = subjects.reduce((curr, next) => curr.percent > next.percent ? curr : next);
+      weakest = subjects.reduce((curr, next) => curr.percent < next.percent ? curr : next);
+    }
     
     return ListView(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 100),
@@ -173,7 +198,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
           children: [
             _buildStatChip("Present", "${totalPresent.toInt()}", const Color(0xFFD1FAE5), const Color(0xFF10B981)),
             _buildStatChip("Absent", "${(totalClasses - totalPresent).toInt()}", const Color(0xFFFEE2E2), const Color(0xFFEF4444)),
-            _buildStatChip("Safe Bunks", "4", const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
+            _buildStatChip("Safe Bunks", "$overallSafeBunks", const Color(0xFFEDE9FE), const Color(0xFF7C3AED)),
           ],
         ),
         const SizedBox(height: 24),
@@ -181,9 +206,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> with Single
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildMinMaxCard("Strongest", "English", "100%", const Color(0xFF10B981))),
+            Expanded(child: _buildMinMaxCard("Strongest", strongest?.subject.name ?? "-", strongest != null ? "${strongest.percent.round()}%" : "-", const Color(0xFF10B981))),
             const SizedBox(width: 12),
-            Expanded(child: _buildMinMaxCard("Weakest", "DBMS", "53%", const Color(0xFFEF4444))),
+            Expanded(child: _buildMinMaxCard("Weakest", weakest?.subject.name ?? "-", weakest != null ? "${weakest.percent.round()}%" : "-", const Color(0xFFEF4444))),
           ],
         ),
         const SizedBox(height: 24),
@@ -386,11 +411,13 @@ class _AddSubjectSheetState extends ConsumerState<_AddSubjectSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(left: 20, right: 20, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(50)))),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(50)))),
           const SizedBox(height: 20),
           Text("Add Subject", style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33))),
           const SizedBox(height: 16),
@@ -426,6 +453,7 @@ class _AddSubjectSheetState extends ConsumerState<_AddSubjectSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

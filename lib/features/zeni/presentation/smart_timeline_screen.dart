@@ -103,6 +103,129 @@ class _SmartTimelineScreenState extends State<SmartTimelineScreen> {
               ],
             ),
           ),
+          _buildQuickCapture(),
+        ],
+      ),
+    );
+  }
+  
+  final TextEditingController _quickCaptureCtrl = TextEditingController();
+  String _nlpPreview = "";
+  String _nlpConfidence = "";
+  Color _nlpColor = Colors.transparent;
+
+  void _parseNLP(String text) {
+    if (text.isEmpty) {
+      setState(() {
+        _nlpPreview = "";
+        _nlpConfidence = "";
+      });
+      return;
+    }
+
+    String action = "Log note";
+    String? contact;
+    String? date;
+    int confidence = 30; // LOW
+
+    final lower = text.toLowerCase();
+    
+    // Actions
+    if (lower.contains("call ") || lower.contains("meet ")) {
+      action = lower.contains("call ") ? "Call" : "Meeting";
+      confidence += 30;
+      
+      // Extract contact
+      final exp = RegExp(r'(call|meet) ([A-Z][a-z]+)');
+      final match = exp.firstMatch(text);
+      if (match != null && match.groupCount >= 2) {
+        contact = match.group(2);
+        confidence += 20;
+      }
+    } else if (lower.contains("buy ")) {
+      action = "Buy item";
+      confidence += 30;
+    } else if (lower.contains("study ")) {
+      action = "Study session";
+      confidence += 30;
+    } else if (lower.contains("remind ")) {
+      action = "Reminder";
+      confidence += 30;
+    }
+
+    // Dates
+    if (lower.contains("today")) { date = "Today"; confidence += 20; }
+    else if (lower.contains("tomorrow")) { date = "Tomorrow"; confidence += 20; }
+    else if (lower.contains("monday")) { date = "Next Monday"; confidence += 20; }
+    else if (lower.contains("next week")) { date = "Next Week"; confidence += 20; }
+    
+    String confStr = "LOW";
+    Color confColor = const Color(0xFFEF4444);
+    if (confidence >= 80) { confStr = "HIGH"; confColor = const Color(0xFF10B981); }
+    else if (confidence >= 50) { confStr = "MEDIUM"; confColor = const Color(0xFFF59E0B); }
+    
+    String preview = action;
+    if (contact != null) preview += " with $contact";
+    if (date != null) preview += " • $date";
+    
+    setState(() {
+      _nlpPreview = preview;
+      _nlpConfidence = confStr;
+      _nlpColor = confColor;
+    });
+  }
+
+  Widget _buildQuickCapture() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_nlpPreview.isNotEmpty) ...[
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, color: _nlpColor, size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(_nlpPreview, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: _nlpColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                  child: Text("$_nlpConfidence CONFIDENCE", style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: _nlpColor)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFE5E7EB))),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _quickCaptureCtrl,
+                    onChanged: _parseNLP,
+                    decoration: InputDecoration(hintText: "Type 'Call Alex tomorrow at 5pm'...", hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF9CA3AF)), border: InputBorder.none),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send_rounded, color: Color(0xFF7C3AED)),
+                  onPressed: () {
+                    // Logic to save
+                    _quickCaptureCtrl.clear();
+                    _parseNLP("");
+                    FocusScope.of(context).unfocus();
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -34,6 +34,10 @@ dependencies:
   uuid: ^4.3.3
   equatable: ^2.0.5
   connectivity_plus: ^6.0.3
+  confetti: ^0.8.0
+  audioplayers: ^6.7.1
+  share_plus: ^13.1.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

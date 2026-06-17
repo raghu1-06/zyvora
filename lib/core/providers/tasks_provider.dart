@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import '../models/task_model.dart';
+import '../services/notification_service.dart';
 
 class TasksNotifier extends StateNotifier<List<TaskModel>> {
   final Box<TaskModel> box;
@@ -10,6 +11,7 @@ class TasksNotifier extends StateNotifier<List<TaskModel>> {
   void add(TaskModel t) { 
     box.put(t.id, t); 
     state = [...state, t]; 
+    _checkReminder(t);
   }
   
   void toggleComplete(String id) {
@@ -28,6 +30,29 @@ class TasksNotifier extends StateNotifier<List<TaskModel>> {
   void update(TaskModel t) { 
     box.put(t.id, t); 
     state = [...state.where((x) => x.id != t.id), t]; 
+    _checkReminder(t);
+  }
+  
+  void updateTask(String id, {String? dueTime}) {
+    final i = state.indexWhere((t) => t.id == id);
+    if (i == -1) return;
+    final t = state[i];
+    if (dueTime != null) t.dueTime = dueTime;
+    box.put(id, t);
+    state = [...state];
+    _checkReminder(t);
+  }
+  
+  void _checkReminder(TaskModel t) {
+    if (t.hasReminder && t.dueDate != null && t.dueTime != null && !t.isCompleted) {
+      final parts = t.dueTime!.split(':');
+      if (parts.length == 2) {
+        final dt = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day, int.parse(parts[0]), int.parse(parts[1]));
+        if (dt.isAfter(DateTime.now())) {
+          NotificationService().scheduleTaskReminder(t.id.hashCode, "Task Reminder", t.title, dt);
+        }
+      }
+    }
   }
   
   void toggleSubtask(String taskId, int subtaskIndex) { 

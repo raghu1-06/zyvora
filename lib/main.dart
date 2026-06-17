@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'core/providers/theme_provider.dart';
 import 'startup/zyvora_startup_overlay.dart';
 import 'core/navigation/app_router.dart';
+import 'core/services/notification_service.dart';
 import 'core/models/task_model.dart';
 import 'core/models/subject_model.dart';
 import 'core/models/session_model.dart';
@@ -28,6 +29,9 @@ void main() async {
   ]);
   
   await _seedIfEmpty();
+  
+  await NotificationService().init();
+  await NotificationService().scheduleDailySummary(8, 0);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -102,7 +106,7 @@ class _ZyvoraAppState extends ConsumerState<ZyvoraApp> {
       builder: (context, child) {
         return Stack(
           children: [
-            if (child != null) child,
+            child ?? const SizedBox.shrink(),
             if (_showStartup)
               ZyvoraStartupOverlay(
                 onComplete: () {

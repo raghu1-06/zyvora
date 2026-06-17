@@ -8,7 +8,8 @@ import '../../../core/models/note_model.dart';
 import '../../../core/providers/notes_provider.dart';
 
 class NewNoteScreen extends ConsumerStatefulWidget {
-  const NewNoteScreen({super.key});
+  final NoteModel? existingNote;
+  const NewNoteScreen({super.key, this.existingNote});
 
   @override
   ConsumerState<NewNoteScreen> createState() => _NewNoteScreenState();
@@ -22,7 +23,7 @@ class _NewNoteScreenState extends ConsumerState<NewNoteScreen> {
   int _activeTool = 5; // Date tool is default
   Timer? _saveTimer;
   bool _isSaving = false;
-  final String _noteId = const Uuid().v4();
+  late final String _noteId;
   bool _isFirstSave = true;
 
   final List<(IconData, String)> _tools = const [
@@ -37,6 +38,14 @@ class _NewNoteScreenState extends ConsumerState<NewNoteScreen> {
   @override
   void initState() {
     super.initState();
+    _noteId = widget.existingNote?.id ?? const Uuid().v4();
+    _isFirstSave = widget.existingNote == null;
+    
+    if (widget.existingNote != null) {
+      _titleCtrl.text = widget.existingNote!.title;
+      _contentCtrl.text = widget.existingNote!.body;
+    }
+    
     _contentCtrl.addListener(_onContentChanged);
     _titleCtrl.addListener(_onTextChanged);
   }
@@ -101,7 +110,7 @@ class _NewNoteScreenState extends ConsumerState<NewNoteScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: Text("New Note", style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
+        title: Text(widget.existingNote == null ? "New Note" : "Edit Note", style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1E1B33))),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF7C3AED), size: 20),
           onPressed: () => Navigator.pop(context),
@@ -118,11 +127,13 @@ class _NewNoteScreenState extends ConsumerState<NewNoteScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: TextField(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
               controller: _titleCtrl,
               style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33)),
               decoration: InputDecoration(
@@ -198,6 +209,7 @@ class _NewNoteScreenState extends ConsumerState<NewNoteScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

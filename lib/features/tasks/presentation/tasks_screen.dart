@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'routine_screen.dart';
+import 'agenda_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/models/task_model.dart';
@@ -36,9 +38,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          CustomScrollView(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Stack(
+          children: [
+            CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -176,6 +180,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -190,6 +195,21 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           ],
         ),
         const Spacer(),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AgendaScreen()));
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0F2FE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.view_agenda_rounded, color: Color(0xFF0284C7), size: 20),
+          ),
+        ),
+        const SizedBox(width: 8),
         Container(
           width: 40,
           height: 40,
@@ -200,19 +220,24 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           child: const Icon(Icons.tune_rounded, color: Color(0xFF7C3AED), size: 20),
         ),
         const SizedBox(width: 8),
-        Container(
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF7C3AED),
-            borderRadius: BorderRadius.circular(50),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18),
-              const SizedBox(width: 4),
-              Text("Routine", style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
-            ],
+        GestureDetector(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const RoutineScreen()));
+          },
+          child: Container(
+            height: 38,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 4),
+                Text("Routine", style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+              ],
+            ),
           ),
         ),
       ],
@@ -390,6 +415,21 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   }
 
   Widget _buildTimelineView(List<TaskModel> tasks) {
+    if (tasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.task_alt_outlined, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            Text("No tasks yet", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            Text("Tap + to create your first task", style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
+    
     return ListView(
       padding: const EdgeInsets.only(top: 8),
       physics: const NeverScrollableScrollPhysics(),
@@ -411,7 +451,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(color: const Color(0xFF7C3AED), borderRadius: BorderRadius.circular(50)),
-                child: Text("4", style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text("${tasks.length}", style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
           ),
@@ -440,6 +480,21 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   Widget _buildKanbanView(List<TaskModel> tasks) {
     final todo = tasks.where((t) => !t.isCompleted).toList();
     final done = tasks.where((t) => t.isCompleted).toList();
+    
+    if (tasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.view_kanban_outlined, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            Text("No tasks yet", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            Text("Tap + to create your first task", style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
     
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -529,6 +584,21 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   Widget _buildZenView(List<TaskModel> tasks) {
     final currentTask = tasks.where((t) => !t.isCompleted).firstOrNull;
+    
+    if (tasks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.self_improvement_rounded, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            Text("No tasks yet", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            Text("Tap + to create your first task", style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
     
     return Center(
       child: Container(
@@ -811,7 +881,7 @@ class _NewTaskSheetState extends ConsumerState<_NewTaskSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text("Set Reminder / Alarm", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
-              Switch(value: _hasReminder, onChanged: (v) => setState(() => _hasReminder = v), activeColor: const Color(0xFF7C3AED), activeTrackColor: const Color(0xFF7C3AED).withValues(alpha: 0.5)),
+              Switch(value: _hasReminder, onChanged: (v) => setState(() => _hasReminder = v), activeThumbColor: const Color(0xFF7C3AED), activeTrackColor: const Color(0xFF7C3AED).withValues(alpha: 0.5)),
             ],
           ),
           const SizedBox(height: 12),

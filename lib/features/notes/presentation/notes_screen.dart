@@ -42,18 +42,31 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 ),
               ),
               Expanded(
-                child: MasonryGridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                  itemCount: notes.length,
-                  itemBuilder: (context, index) {
-                    final note = notes[index];
-                    final color = _borderColors[index % _borderColors.length];
-                    return _NoteCard(note: note, borderColor: color);
-                  },
-                ),
+                child: notes.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.note_outlined, size: 64, color: AppColors.textMuted),
+                            const SizedBox(height: 16),
+                            Text("No notes yet", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            const SizedBox(height: 8),
+                            Text("Tap + to create your first note", style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      )
+                    : MasonryGridView.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                        itemCount: notes.length,
+                        itemBuilder: (context, index) {
+                          final note = notes[index];
+                          final color = _borderColors[index % _borderColors.length];
+                          return _NoteCard(note: note, borderColor: color);
+                        },
+                      ),
               ),
             ],
           ),
@@ -84,6 +97,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         ],
       ),
     );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => NewNoteScreen(existingNote: note)));
+      
   }
 }
 

@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../zeni/presentation/smart_timeline_screen.dart';
 import '../../../core/providers/tasks_provider.dart';
+import 'focus_mode_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -445,7 +446,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(width: 8),
             Expanded(child: _ActionTile(bg: const Color(0xFFFEF3C7), icon: Icons.add_alarm_rounded, color: const Color(0xFFF59E0B), label: "Add Reminder")),
             const SizedBox(width: 8),
-            Expanded(child: _ActionTile(bg: const Color(0xFFCFFAFE), icon: Icons.center_focus_strong_outlined, color: const Color(0xFF06B6D4), label: "Focus Mode")),
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FocusModeScreen()));
+                },
+                child: _ActionTile(bg: const Color(0xFFCFFAFE), icon: Icons.center_focus_strong_outlined, color: const Color(0xFF06B6D4), label: "Focus Mode"),
+              ),
+            ),
           ],
         ),
       ],

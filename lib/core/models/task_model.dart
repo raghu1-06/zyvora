@@ -17,6 +17,7 @@ class TaskModel extends HiveObject {
   @HiveField(11) bool hasReminder;
   @HiveField(12) DateTime createdAt;
   @HiveField(13) String? blockedBy;
+  @HiveField(14) int? durationMinutes;
 
   TaskModel({
     required this.id,
@@ -33,6 +34,7 @@ class TaskModel extends HiveObject {
     this.hasReminder = false,
     required this.createdAt,
     this.blockedBy,
+    this.durationMinutes,
   });
 
   bool get isOverdue {

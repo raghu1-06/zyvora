@@ -262,6 +262,7 @@ class _ZeniBottomSheetState extends ConsumerState<ZeniBottomSheet> {
               ),
             ],
           ),
+          ),
         );
       }
     );

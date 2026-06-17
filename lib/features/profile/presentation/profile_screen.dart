@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/tasks_provider.dart';
@@ -23,6 +27,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _hapticOn = true;
   bool _syncOn = true;
   bool _adaptiveOn = true;
+
+  Future<void> _exportData() async {
+    try {
+      final tasks = ref.read(tasksProvider);
+      final subjects = ref.read(subjectsProvider);
+      final sessions = ref.read(sessionsProvider);
+
+      final Map<String, dynamic> backup = {
+        'tasks': tasks.map((t) => {'id': t.id, 'title': t.title, 'isCompleted': t.isCompleted}).toList(),
+        'subjects': subjects.map((s) => {'id': s.id, 'name': s.name}).toList(),
+        'sessions': sessions.map((s) => {'id': s.id, 'isPresent': s.isPresent}).toList(),
+      };
+
+      final jsonStr = jsonEncode(backup);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/zyvora_backup.json');
+      await file.writeAsString(jsonStr);
+
+      await Share.shareXFiles([XFile(file.path)], text: 'Zyvora Data Backup');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -326,7 +355,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 _SettingsTile(icon: Icons.cloud_outlined, bg: const Color(0xFFD1FAE5), iconCol: const Color(0xFF10B981), title: "Cloud Sync", subtitle: "Backup your data", isSwitch: true, switchVal: _syncOn, onChanged: (v) => setState(() => _syncOn = v)),
                 const Divider(height: 1, indent: 56, color: Color(0xFFF3F4F6)),
-                _SettingsTile(icon: Icons.download_outlined, bg: const Color(0xFFE0E7FF), iconCol: const Color(0xFF4F46E5), title: "Export Data", subtitle: "Download to CSV/JSON", isArrow: true),
+                _SettingsTile(icon: Icons.download_outlined, bg: const Color(0xFFE0E7FF), iconCol: const Color(0xFF4F46E5), title: "Export Data", subtitle: "Download to CSV/JSON", isArrow: true, onTap: _exportData),
               ],
             ),
           ),
@@ -389,6 +418,7 @@ class _SettingsTile extends StatelessWidget {
   final bool switchVal;
   final ValueChanged<bool>? onChanged;
   final bool isDestructive;
+  final VoidCallback? onTap;
 
   const _SettingsTile({
     required this.icon,
@@ -401,6 +431,7 @@ class _SettingsTile extends StatelessWidget {
     this.switchVal = false,
     this.onChanged,
     this.isDestructive = false,
+    this.onTap,
   });
 
   @override
@@ -416,9 +447,9 @@ class _SettingsTile extends StatelessWidget {
       title: Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF1E1B33))),
       subtitle: Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
       trailing: isSwitch
-          ? Switch(value: switchVal, onChanged: onChanged, activeColor: const Color(0xFF7C3AED), activeTrackColor: const Color(0xFF7C3AED).withValues(alpha: 0.5))
+          ? Switch(value: switchVal, onChanged: onChanged, activeThumbColor: const Color(0xFF7C3AED), activeTrackColor: const Color(0xFF7C3AED).withValues(alpha: 0.5))
           : (isArrow ? const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)) : null),
-      onTap: isSwitch ? () => onChanged?.call(!switchVal) : () {},
+      onTap: isSwitch ? () => onChanged?.call(!switchVal) : onTap,
     );
   }
 }
