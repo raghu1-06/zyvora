@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../data/zeni_repository.dart';
+
+class Message {
+  final String text;
+  final bool isUser;
+  Message(this.text, this.isUser);
+}
 
 class ZeniBottomSheet extends StatefulWidget {
   const ZeniBottomSheet({super.key});
@@ -9,141 +17,323 @@ class ZeniBottomSheet extends StatefulWidget {
 }
 
 class _ZeniBottomSheetState extends State<ZeniBottomSheet> {
-  final TextEditingController _controller = TextEditingController();
-  String _parsedTitle = "";
-  String _parsedDate = "";
-  String _parsedTime = "";
+  final TextEditingController _inputCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+  final List<Message> _messages = [];
+  bool _isLoading = false;
+  String _apiKey = '';
+  final _repo = ZeniRepository();
 
-  void _onTextChanged(String val) {
+  @override
+  void initState() {
+    super.initState();
+    _loadApiKey();
+  }
+  
+  Future<void> _loadApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _apiKey = prefs.getString('zeni_api_key') ?? '';
+    });
+  }
+
+  Future<void> _saveApiKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zeni_api_key', key);
+    setState(() {
+      _apiKey = key;
+    });
+  }
+  
+  void _promptApiKey() {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Gemini API Key", style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Please enter your free Gemini API key from Google AI Studio to use Zeni.", style: GoogleFonts.inter(fontSize: 13, color: Colors.black54)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(hintText: "AIzaSy...", border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              _saveApiKey(ctrl.text.trim());
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white),
+            child: const Text("Save"),
+          ),
+        ],
+      )
+    );
+  }
+
+  void _sendMessage([String? predefinedText]) async {
+    final text = predefinedText ?? _inputCtrl.text.trim();
+    if (text.isEmpty) return;
+    
+    if (_apiKey.isEmpty) {
+      _promptApiKey();
+      return;
+    }
+    
+    _inputCtrl.clear();
+    setState(() {
+      _messages.add(Message(text, true));
+      _isLoading = true;
+    });
+    _scrollToBottom();
+    
+    final result = await _repo.process(text, _apiKey);
+    
+    String responseText = "";
+    if (result is ZeniTaskCreated) {
+      responseText = "✅ Created task: ${result.title} [${result.priority} priority, ${result.category}]";
+    } else if (result is ZeniAttendanceLogged) {
+      responseText = "✅ Marked ${result.subject} as ${result.isPresent ? 'Present' : 'Absent'}.";
+    } else if (result is ZeniNoteCreated) {
+      responseText = "✅ Created note: ${result.title}";
+    } else if (result is ZeniChatResponse) {
+      responseText = result.message;
+    } else if (result is ZeniError) {
+      responseText = "⚠️ Error: ${result.error}";
+    }
+    
     if (mounted) {
       setState(() {
-        _parsedTitle = val;
-        _parsedDate = val.toLowerCase().contains("tomorrow") ? "Tomorrow" : "Today";
-        _parsedTime = val.contains("8pm") ? "20:00" : (val.contains("3:30") ? "15:30" : "");
+        _messages.add(Message(responseText, false));
+        _isLoading = false;
       });
+      _scrollToBottom();
     }
+  }
+  
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(50)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(
+                  children: [
+                    const CircleAvatar(radius: 22, backgroundColor: Color(0xFF7C3AED), child: Icon(Icons.auto_awesome, color: Colors.white, size: 24)),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Zeni", style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33))),
+                        Text("Your personal AI assistant", style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9CA3AF))),
+                      ],
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(border: Border.all(color: const Color(0xFFD1FAE5)), borderRadius: BorderRadius.circular(50)),
+                      child: Row(
+                        children: [
+                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                          const SizedBox(width: 4),
+                          Text("ONLINE", style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF10B981))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFF3F4F6)),
+              
+              Expanded(
+                child: _messages.isEmpty ? _buildEmptyState() : _buildChatState(),
+              ),
+              
+              Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+                ),
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(color: const Color(0xFFF9F9FF), borderRadius: BorderRadius.circular(50), border: Border.all(color: const Color(0xFFE5E7EB))),
+                        child: TextField(
+                          controller: _inputCtrl,
+                          style: GoogleFonts.inter(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: "Ask Zeni anything...",
+                            hintStyle: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF9CA3AF)),
+                            border: InputBorder.none,
+                          ),
+                          onSubmitted: (_) => _sendMessage(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(width: 40, height: 40, decoration: const BoxDecoration(color: Color(0xFFEDE9FE), shape: BoxShape.circle), child: const Icon(Icons.mic_none_rounded, color: Color(0xFF7C3AED), size: 20)),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => _sendMessage(),
+                      child: Container(width: 40, height: 40, decoration: const BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle), child: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(50))),
+          Container(
+            width: 90, height: 90,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEDE9FE),
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: Color(0x407C3AED), blurRadius: 28, spreadRadius: 4)],
+            ),
+            child: const Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 42),
           ),
           const SizedBox(height: 20),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.auto_awesome, color: Color(0xFF7C3AED)),
-              const SizedBox(width: 8),
-              Text("Quick Capture", style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33))),
+              Text("Meet Zeni ", style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF1E1B33))),
+              const Text("✨", style: TextStyle(fontSize: 22)),
             ],
           ),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF7C3AED), width: 1.5),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onChanged: _onTextChanged,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: "Type naturally...",
-                      hintStyle: GoogleFonts.inter(color: const Color(0xFF9CA3AF)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.mic, color: Color(0xFF7C3AED)),
-                  onPressed: () {},
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          Text(
+            "Your intelligent productivity partner.\nManage tasks, note down thoughts,\nand log attendance naturally.",
+            style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF6B7280), height: 1.6),
+            textAlign: TextAlign.center,
           ),
-          if (_parsedTitle.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
-              child: Column(
+          const SizedBox(height: 28),
+          _ZeniAction(Icons.checklist_rounded, "Review what I learned today", () => _sendMessage("Review what I learned today")),
+          _ZeniAction(Icons.task_alt_rounded, "Plan tomorrow's assignments", () => _sendMessage("Plan tomorrow's assignments")),
+          _ZeniAction(Icons.school_outlined, "Log my study hours", () => _sendMessage("Log my study hours")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatState() {
+    return ListView.builder(
+      controller: _scrollCtrl,
+      padding: const EdgeInsets.all(16),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) {
+        final msg = _messages[index];
+        if (msg.isUser) {
+          return Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12, left: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFF7C3AED),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(18), bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18), topRight: Radius.circular(4)),
+              ),
+              child: Text(msg.text, style: GoogleFonts.inter(fontSize: 14, color: Colors.white)),
+            ),
+          );
+        } else {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12, right: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(topRight: Radius.circular(18), bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18), topLeft: Radius.circular(4)),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text("Parsed Task", style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF6B7280))),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: const Color(0xFFD1FAE5), borderRadius: BorderRadius.circular(4)),
-                        child: Text("High Confidence", style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF10B981))),
-                      ),
-                    ],
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 14),
                   ),
-                  const SizedBox(height: 8),
-                  Text(_parsedTitle, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33))),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Chip(
-                        label: Text(_parsedDate, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF7C3AED))),
-                        backgroundColor: const Color(0xFFEDE9FE),
-                        visualDensity: VisualDensity.compact,
-                        side: BorderSide.none,
-                      ),
-                      if (_parsedTime.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Chip(
-                          label: Text(_parsedTime, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFF59E0B))),
-                          backgroundColor: const Color(0xFFFEF3C7),
-                          visualDensity: VisualDensity.compact,
-                          side: BorderSide.none,
-                        ),
-                      ],
-                    ],
-                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(msg.text, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF1E1B33)))),
                 ],
               ),
             ),
+          );
+        }
+      },
+    );
+  }
+}
+
+class _ZeniAction extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final VoidCallback onTap;
+  
+  const _ZeniAction(this.icon, this.text, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE5E7EB))),
+        child: Row(
+          children: [
+            Container(width: 32, height: 32, decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: const Color(0xFF7C3AED), size: 16)),
+            const SizedBox(width: 12),
+            Expanded(child: Text(text, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E1B33)))),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFD1D5DB)),
           ],
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Cancel", style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF6B7280))),
-                ),
-              ),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text("Confirm", style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

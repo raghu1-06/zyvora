@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../profile/presentation/profile_screen.dart';
+import '../../zeni/presentation/smart_timeline_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -486,7 +487,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text("Smart Timeline", style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w600)),
             const Spacer(),
-            Text("View All", style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF7C3AED))),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartTimelineScreen()));
+              },
+              child: Text("View All", style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF7C3AED))),
+            ),
           ],
         ),
         const SizedBox(height: 12),
